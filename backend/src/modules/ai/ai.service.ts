@@ -6,9 +6,9 @@ import { parseResponse } from './response.parser';
 import logger from '../../utils/logger';
 
 const genAI = new GoogleGenerativeAI(config.geminiApiKey);
-const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
-logger.info('[AI] Initialized Gemini API with model: gemini-pro');
+logger.info('[AI] Initialized Gemini API with model: gemini-2.5-flash');
 
 // Helper to classify Gemini API errors
 const classifyGeminiError = (error: any): { type: 'quota' | 'temporary' | 'validation' | 'unknown'; isRetryable: boolean } => {
