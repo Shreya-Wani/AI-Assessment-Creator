@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { User, IUser } from '../models/User';
 import { AppError } from '../utils/AppError';
 import logger from '../utils/logger';
+import { config } from '../config';
 
 // ── Types ─────────────────────────────────────────────────────────────
 export interface RegisterData {
@@ -30,14 +31,9 @@ export interface AuthResponse {
 // ── Private Helpers ───────────────────────────────────────────────────
 
 const generateToken = (id: string, role: string): string => {
-
-  if (!process.env.JWT_SECRET) {
-    throw new Error("JWT_SECRET is not defined in environment");
-  }
-
   return jwt.sign(
     { id, role },
-    process.env.JWT_SECRET,
+    config.jwtSecret,
     { expiresIn: '30d' }
   );
 };

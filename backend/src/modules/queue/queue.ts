@@ -21,7 +21,7 @@ export const getQueue = (): Queue<GenerationJobData> => {
         removeOnFail: { age: 86400 },
       },
     });
-    logger.info('BullMQ Queue initialized -> assignment-generation');
+    logger.info('BullMQ Queue initialized -> assignment-generation with retry strategy: 3 attempts with exponential backoff');
   }
   return queue!;
 };

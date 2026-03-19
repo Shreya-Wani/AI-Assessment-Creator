@@ -22,6 +22,16 @@ export interface IResult {
   sections: ISection[];
 }
 
+// Error result types for tracking failures
+export interface IErrorResult {
+  error: string;
+  errorType?: 'quota' | 'temporary' | 'validation' | 'unknown';
+  retryable?: boolean;
+  attempt?: number;
+  maxAttempts?: number;
+  willRetry?: boolean;
+}
+
 // Alias for ai.service.ts — IQuestionPaper is the generated output shape
 export type IQuestionPaper = IResult;
 
@@ -31,8 +41,9 @@ export interface IAssignment extends Document {
   questionsConfig: IQuestionConfig[];
   instructions: string;
   fileUrl: string;
+  extractedContent?: string; // PDF text content extracted from fileUrl
   status: 'pending' | 'processing' | 'completed' | 'failed';
-  result?: IResult;
+  result?: IResult | IErrorResult;
   createdBy: mongoose.Types.ObjectId;
   jobId?: string;
 }
@@ -61,6 +72,7 @@ const AssignmentSchema = new Schema<IAssignment>({
   questionsConfig: [QuestionConfigSchema],
   instructions: { type: String, default: '' },
   fileUrl: { type: String, default: '' },
+  extractedContent: { type: String, default: '' },
   status: { type: String, enum: ['pending', 'processing', 'completed', 'failed'], default: 'pending' },
   result: {
     sections: [SectionSchema]

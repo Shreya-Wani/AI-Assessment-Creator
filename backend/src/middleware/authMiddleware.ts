@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
 import { User, IUser } from '../models/User';
 import { config } from '../config';
+import logger from '../utils/logger';
 
 export interface AuthRequest extends Request {
   user?: IUser;
@@ -14,7 +15,7 @@ export const protect = async (req: AuthRequest, res: Response, next: NextFunctio
     try {
       token = req.headers.authorization.split(' ')[1];
 
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'super_secret_jwt_key') as any;
+      const decoded = jwt.verify(token, config.jwtSecret) as any;
 
       const user = await User.findById(decoded.id).select('-passwordHash');
       if (!user) {
@@ -24,8 +25,8 @@ export const protect = async (req: AuthRequest, res: Response, next: NextFunctio
       
       req.user = user;
       next();
-    } catch (error) {
-      console.error('Auth error:', error);
+    } catch (error: any) {
+      logger.warn({ error: error.message }, '[AUTH] Token verification failed');
       res.status(401).json({ error: 'Not authorized, token failed' });
     }
   } else {

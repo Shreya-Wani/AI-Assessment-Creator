@@ -6,8 +6,7 @@
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.js",
-    "worker": "ts-node-dev --respawn --transpile-only src/workers/generationWorker.ts"
+    "start": "node dist/server.js"
   },
   "dependencies": {
     "@google-cloud/vertexai": "^1.10.0",

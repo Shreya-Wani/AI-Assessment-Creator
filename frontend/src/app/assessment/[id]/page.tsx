@@ -66,6 +66,9 @@ function AssessmentContent() {
   const [localProgress, setLocalProgress] = useState(0);
   const [error, setError] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [errorType, setErrorType] = useState<'quota' | 'temporary' | 'validation' | 'unknown'>('unknown');
+  const [isRetryable, setIsRetryable] = useState(true);
+  const [retryInfo, setRetryInfo] = useState<{ attempt?: number; maxAttempts?: number; willRetry?: boolean }>({});
   const [result, setResult] = useState<any>(null);
   const [fakeTickingItems, setFakeTickingItems] = useState<string[]>([]);
 
@@ -154,6 +157,31 @@ function AssessmentContent() {
       if (data.jobId === activeJobId) {
         setError(true);
         setErrorMsg(data.error || 'Generation failed');
+        
+        // Extract error type and retry info if available in the error message or data
+        const isQuotaError = data.error?.includes('quota') || data.error?.includes('Quota');
+        const isTemporaryError = data.error?.toLowerCase().includes('temporary') || data.error?.toLowerCase().includes('attempt');
+        
+        if (isQuotaError) {
+          setErrorType('quota');
+          setIsRetryable(false);
+        } else if (isTemporaryError) {
+          setErrorType('temporary');
+          setIsRetryable(true);
+          // Extract attempt info from error message (e.g., "error (Attempt 1/3)")
+          const attemptMatch = data.error?.match(/Attempt (\d+)\/(\d+)/);
+          if (attemptMatch) {
+            setRetryInfo({ 
+              attempt: parseInt(attemptMatch[1]), 
+              maxAttempts: parseInt(attemptMatch[2]),
+              willRetry: parseInt(attemptMatch[1]) < parseInt(attemptMatch[2])
+            });
+          }
+        } else {
+          setErrorType('unknown');
+          setIsRetryable(true);
+        }
+        
         setLocalProgress(0);
         updateProgress(0, 'failed');
       }
@@ -181,6 +209,9 @@ function AssessmentContent() {
       setLocalProgress(0);
       setError(false);
       setErrorMsg('');
+      setErrorType('unknown');
+      setIsRetryable(true);
+      setRetryInfo({});
       setResult(null);
       setFakeTickingItems([]);
       updateProgress(0, 'pending');
@@ -322,21 +353,58 @@ function AssessmentContent() {
                     <h3 style={{ fontSize: 16, color: '#ef4444', fontWeight: 700, marginBottom: 8 }}>
                       Generation Failed
                     </h3>
-                    <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 20, lineHeight: 1.5 }}>
+                    
+                    {/* Error Message */}
+                    <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16, lineHeight: 1.5 }}>
                       {errorMsg || 'Something went wrong during AI processing. Please try again.'}
                     </p>
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={handleRegenerate}
-                      style={{
-                        padding: '12px 24px', borderRadius: 12, border: 'none',
-                        background: 'linear-gradient(135deg, #f97316, #f59e0b)',
-                        color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer',
-                      }}
-                    >
-                      🔁 Regenerate
-                    </motion.button>
+
+                    {/* Error Type Specific Information */}
+                    {errorType === 'quota' && (
+                      <div style={{
+                        padding: '12px 16px', borderRadius: 12,
+                        background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)',
+                        marginBottom: 16, fontSize: 12, color: '#dc2626', textAlign: 'left', lineHeight: 1.5
+                      }}>
+                        <strong>⚡ Action Required:</strong> Your Google Gemini API quota has been exceeded. 
+                        <br/>Please check your Google AI Studio quota limits and upgrade your plan if needed.
+                        <br/><a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer"
+                          style={{ color: '#dc2626', textDecoration: 'underline' }}>
+                          Go to Google AI Studio →
+                        </a>
+                      </div>
+                    )}
+
+                    {errorType === 'temporary' && isRetryable && retryInfo.willRetry && (
+                      <div style={{
+                        padding: '12px 16px', borderRadius: 12,
+                        background: 'rgba(251, 191, 36, 0.1)', border: '1px solid rgba(251, 191, 36, 0.3)',
+                        marginBottom: 16, fontSize: 12, color: '#b45309', textAlign: 'left', lineHeight: 1.5
+                      }}>
+                        <strong>🔄 Retrying:</strong> This was a temporary error (Attempt {retryInfo.attempt}/{retryInfo.maxAttempts}). 
+                        <br/>The system will automatically retry in the background.
+                      </div>
+                    )}
+
+                    {/* Regenerate Button - Conditional Display */}
+                    {!isRetryable || errorType === 'quota' ? (
+                      <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                        This error cannot be automatically retried. Please fix the issue and try again.
+                      </div>
+                    ) : (
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={handleRegenerate}
+                        style={{
+                          padding: '12px 24px', borderRadius: 12, border: 'none',
+                          background: 'linear-gradient(135deg, #f97316, #f59e0b)',
+                          color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                        }}
+                      >
+                        🔁 Regenerate
+                      </motion.button>
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>
