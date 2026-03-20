@@ -15,7 +15,7 @@ interface AssignmentState {
   progress: number;
   generationStatus: string;
 
-  createAssignment: (formData: FormData) => Promise<string>;
+  createAssignment: (formData: any) => Promise<string>;
   fetchAssignment: (id: string) => Promise<void>;
   fetchAssignments: () => Promise<void>;
   regenerateAssignment: (id: string) => Promise<void>;
@@ -34,6 +34,7 @@ const initialFormData: AssignmentFormData = {
   questionTypes: ['mcq'],
   numberOfQuestions: 10,
   totalMarks: 50,
+  duration: 45,
   difficulty: 'mixed',
   additionalInstructions: '',
   file: null,
@@ -62,10 +63,9 @@ export const useAssignmentStore = create<AssignmentState>((set) => ({
   createAssignment: async (payload: any) => {
     set({ isSubmitting: true, error: null });
     try {
-      const response = await apiFetch('/assignments', {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      });
+      // Support both JSON payloads and FormData
+      const options: RequestInit = { method: 'POST', body: payload instanceof FormData ? payload : JSON.stringify(payload) };
+      const response = await apiFetch('/assignments', options as RequestInit);
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -73,20 +73,24 @@ export const useAssignmentStore = create<AssignmentState>((set) => ({
       }
 
       const data = await response.json();
-      console.log('Create assignment response:', data);
-      
+
       // Store the jobId immediately so the assessment page can use it
-      set({ 
-        isSubmitting: false, 
-        progress: 0, 
+      set({
+        isSubmitting: false,
+        progress: 0,
         generationStatus: 'pending',
         currentAssignment: {
-          _id: data.assignmentId,
-          jobId: data.jobId,
-          status: 'pending'
-        } as any
+          _id: data.assignmentId || data.assignment?._id,
+          jobId: data.jobId || data.assignment?.jobId,
+          status: 'pending',
+          title: payload instanceof FormData ? payload.get('title') as string : payload.title,
+          subject: payload instanceof FormData ? payload.get('subject') as string : payload.subject,
+          grade: payload instanceof FormData ? payload.get('grade') as string : payload.grade,
+          totalMarks: payload instanceof FormData ? Number(payload.get('totalMarks')) : payload.totalMarks,
+          duration: payload instanceof FormData ? payload.get('duration') : payload.duration,
+        } as any,
       });
-      
+
       return data.assignmentId || data.assignment?._id;
     } catch (error: any) {
       set({ isSubmitting: false, error: error.message });

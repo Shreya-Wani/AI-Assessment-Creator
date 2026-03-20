@@ -123,13 +123,13 @@ export default function LoginPage() {
                         whileHover={{ scale: 1.03 }}
                         whileTap={{ scale: 0.97 }}
                         onClick={() => setRole(r)}
-                        style={{
-                          flex: 1, padding: '12px 0', borderRadius: 12, cursor: 'pointer',
-                          border: role === r ? '2px solid #f97316' : '1px solid #e2e8f0',
-                          background: role === r ? '#fff7ed' : '#f8fafc',
-                          color: role === r ? '#f97316' : '#6b7280',
-                          fontSize: 13, fontWeight: 600, transition: 'all 0.2s',
-                        }}
+                            style={{
+                            flex: 1, padding: '12px 0', borderRadius: 12, cursor: 'pointer',
+                            border: role === r ? '2px solid #f97316' : '1px solid #e2e8f0',
+                            background: role === r ? '#fff7ed' : '#f8fafc',
+                            color: role === r ? '#f97316' : '#6b7280',
+                            fontSize: 13, fontWeight: 600, transition: 'all 0.2s',
+                            }}
                       >
                         {r === 'TEACHER' ? '🧑‍🏫 Teacher' : '🎓 Student'}
                       </motion.button>
@@ -146,10 +146,10 @@ export default function LoginPage() {
               whileTap={{ scale: 0.98 }}
               style={{
                 padding: '14px 0', borderRadius: 12, border: 'none',
-                background: isLoading ? '#9ca3af' : 'linear-gradient(135deg, #f97316, #f59e0b)',
-                color: '#fff', fontSize: 15, fontWeight: 700, cursor: isLoading ? 'wait' : 'pointer',
-                transition: 'all 0.2s',
-                boxShadow: isLoading ? 'none' : '0 8px 24px rgba(249, 115, 22, 0.3)',
+                    background: isLoading ? '#9ca3af' : '#111827',
+                    color: '#fff', fontSize: 15, fontWeight: 700, cursor: isLoading ? 'wait' : 'pointer',
+                    transition: 'all 0.2s',
+                    boxShadow: isLoading ? 'none' : '0 8px 24px rgba(0,0,0,0.08)',
               }}
             >
               {isLoading ? '⏳ Please wait...' : isRegister ? 'Create Account' : 'Sign In'}

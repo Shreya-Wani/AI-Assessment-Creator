@@ -28,7 +28,9 @@ export const createAssignmentService = async (data: CreateAssignmentInput, userI
 };
 
 export const getAssignmentsService = async (userId: string) => {
-  return Assignment.find({ createdBy: userId }).select('-result -fileUrl').sort({ createdAt: -1 });
+  // Include `result` so frontend can render already-generated papers without extra fetches.
+  // We still exclude heavy `fileUrl` if present.
+  return Assignment.find({ createdBy: userId }).select('-fileUrl').sort({ createdAt: -1 });
 };
 
 export const getAssignmentByIdService = async (id: string) => {

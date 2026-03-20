@@ -45,31 +45,32 @@ function HomeContent() {
       <Sidebar />
       <div className="main-content">
         <TopBar title="Home" />
-        <div className="page-container" style={{ padding: '30px' }}>
+        <div className="page-container" style={{ padding: '24px 16px' }}>
 
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
             <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8 }}>
               Welcome back, {user?.schoolName || 'Teacher'}!
             </h1>
-            <p style={{ color: 'var(--text-secondary)', marginBottom: 32 }}>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: 24, fontSize: 14, lineHeight: 1.5 }}>
               Here is a summary of your classroom activities.
             </p>
 
             {/* Stats Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20, marginBottom: 40 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20, marginBottom: 24 }} className="stat-grid-mobile">
               {statCards.map((s, i) => (
                 <motion.div
+                  className="stat-card"
                   key={i}
                   initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.1 }}
                   whileHover={{ y: -5, boxShadow: '0 8px 30px rgba(0,0,0,0.05)' }}
                   style={{ background: 'var(--bg-surface)', padding: 24, borderRadius: 16, border: '1px solid var(--border-light)', display: 'flex', alignItems: 'center', gap: 16 }}
                 >
-                  <div style={{ background: s.color, width: 50, height: 50, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>
+                  <div className="stat-icon" style={{ background: s.color, width: 50, height: 50, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>
                     {s.icon}
                   </div>
                   <div>
-                    <div style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 600 }}>{s.title}</div>
-                    <div style={{ fontSize: 28, fontWeight: 800 }}>
+                    <div className="stat-title" style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 600 }}>{s.title}</div>
+                    <div className="stat-value" style={{ fontSize: 28, fontWeight: 800 }}>
                       {isLoading ? (
                         <motion.span animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1.2 }}>—</motion.span>
                       ) : s.value}
@@ -80,8 +81,8 @@ function HomeContent() {
             </div>
 
             {/* Recent Activity */}
-            <div style={{ background: 'var(--bg-surface)', borderRadius: 16, border: '1px solid var(--border-light)', overflow: 'hidden' }}>
-              <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-strong)', fontWeight: 600 }}>Recent Activity</div>
+            <div style={{ background: 'var(--bg-surface)', borderRadius: 16, border: '1px solid var(--border-light)', overflow: 'hidden', marginBottom: 24 }}>
+              <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-strong)', fontWeight: 600, fontSize: 15 }}>Recent Activity</div>
 
               <AnimatePresence mode="wait">
                 {isLoading ? (

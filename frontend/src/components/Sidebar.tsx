@@ -3,12 +3,19 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useAuthStore } from '../store/useAuthStore';
+import { useUIStore } from '../store/useUIStore';
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const user = useAuthStore((s) => s.user);
+  const isOpen = useUIStore((s) => s.mobileSidebarOpen);
+  const close = useUIStore((s) => s.close);
 
   return (
-    <aside className="sidebar">
+    <>
+      {isOpen && <div className="mobile-sidebar-overlay" onClick={close} />}
+      <aside className={`sidebar ${isOpen ? 'mobile-open' : ''}`}>
       <Link href="/" className="sidebar-logo">
         <div className="logo-icon">V</div>
         <div className="logo-text">VedaAI</div>
@@ -40,16 +47,17 @@ export default function Sidebar() {
         <Link href="/settings" className={`nav-item ${pathname === '/settings' ? 'active' : ''}`}>
           <span style={{ opacity: pathname === '/settings' ? 1 : 0.6 }}>⚙️</span> Settings
         </Link>
-        <Link href="/profile" className={`sidebar-user ${pathname === '/profile' ? 'active' : ''}`} style={{ textDecoration: 'none' }}>
+        <Link href="/profile" className={`sidebar-user ${pathname === '/profile' ? 'active' : ''}`} style={{ textDecoration: 'none' }} onClick={close}>
           <div className="user-avatar">
             <img src="https://api.dicebear.com/7.x/notionists/svg?seed=Teacher" alt="Avatar" width="100%" height="100%" />
           </div>
           <div className="user-info">
-            <div className="user-name">Delhi Public School</div>
-            <div className="user-role">Bokaro Steel City</div>
+            <div className="user-name">{user?.schoolName ?? 'Your School'}</div>
+            <div className="user-role">{user?.location ?? ''}</div>
           </div>
         </Link>
       </div>
     </aside>
+    </>
   );
 }

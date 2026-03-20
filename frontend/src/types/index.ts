@@ -19,7 +19,7 @@ export interface QuestionPaper {
   title: string;
   subject: string;
   totalMarks: number;
-  duration: string;
+  duration: string | number;
   generalInstructions: string[];
   sections: Section[];
 }
@@ -34,6 +34,7 @@ export interface Assignment {
   questionTypes: string[];
   numberOfQuestions: number;
   totalMarks: number;
+  duration?: string | number;
   difficulty: string;
   additionalInstructions: string;
   fileName?: string;
@@ -55,6 +56,7 @@ export interface AssignmentFormData {
   questionTypes: string[];
   numberOfQuestions: number;
   totalMarks: number;
+  duration?: string | number;
   difficulty: string;
   additionalInstructions: string;
   file?: File | null;

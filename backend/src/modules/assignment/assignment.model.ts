@@ -68,6 +68,11 @@ const SectionSchema = new Schema<ISection>({
 
 const AssignmentSchema = new Schema<IAssignment>({
   title: { type: String, required: true },
+  subject: { type: String, default: '' },
+  grade: { type: String, default: '' },
+  duration: { type: Schema.Types.Mixed, default: '' },
+  totalMarks: { type: Number, default: 0 },
+  numberOfQuestions: { type: Number, default: 0 },
   dueDate: { type: Date, required: true },
   questionsConfig: [QuestionConfigSchema],
   instructions: { type: String, default: '' },

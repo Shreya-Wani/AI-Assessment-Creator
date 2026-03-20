@@ -23,6 +23,10 @@ import logger from './utils/logger';
 const app = express();
 const httpServer = createServer(app);
 
+// If this app is behind a proxy (nginx, cloud load balancer), trust the proxy's X-Forwarded-* headers
+// so rate limiting uses the real client IP instead of the proxy IP.
+app.set('trust proxy', 1);
+
 // ── Global Middleware ─────────────────────────────────────────────────
 
 // Request ID (distributed tracing)
@@ -35,11 +39,18 @@ app.use(cors({
 }));
 
 // Rate Limiting (abuse protection)
+// - In production keep a stricter limit; during local development allow more requests to avoid 429s.
+const isProd = process.env.NODE_ENV === 'production';
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100,
+  max: isProd ? 100 : 1000,
   standardHeaders: true,
   legacyHeaders: false,
+  // Skip rate-limiting for local development hosts (localhost) to avoid accidental 429s when developing.
+  skip: (req) => {
+    const ip = req.ip || req.connection.remoteAddress || '';
+    return ip === '::1' || ip === '127.0.0.1' || req.hostname?.includes('localhost');
+  },
   message: { error: 'Too many requests, please try again later.' },
 });
 app.use('/api/', limiter);

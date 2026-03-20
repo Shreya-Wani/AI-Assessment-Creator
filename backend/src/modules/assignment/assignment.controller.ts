@@ -95,7 +95,8 @@ export const downloadAssignmentPdf = async (req: AuthRequest, res: Response): Pr
       res.status(400).json({ error: 'Result not generated yet' });
       return;
     }
-    generatePdf(assignment, res);
+    const user = requireUser(req);
+    generatePdf(assignment, res, user);
   } catch (error: any) {
     res.status(error.statusCode || 500).json({ error: error.message });
   }

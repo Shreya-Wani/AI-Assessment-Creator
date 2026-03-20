@@ -3,6 +3,9 @@ import { z } from 'zod';
 // ── Input Validation ──────────────────────────────────────────────────
 export const createAssignmentSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters'),
+  subject: z.string().min(1, 'Subject is required'),
+  grade: z.string().min(1, 'Grade is required'),
+  duration: z.union([z.string(), z.number()]).optional(),
   dueDate: z.string().refine((val) => !isNaN(Date.parse(val)), {
     message: 'Invalid date format',
   }),
@@ -15,6 +18,8 @@ export const createAssignmentSchema = z.object({
   ).min(1, 'At least one question config is required'),
   instructions: z.string().optional().default(''),
   fileUrl: z.string().optional().default(''),
+  totalMarks: z.number().optional(),
+  numberOfQuestions: z.number().optional(),
 });
 
 export type CreateAssignmentInput = z.infer<typeof createAssignmentSchema>;

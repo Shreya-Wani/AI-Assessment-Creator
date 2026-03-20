@@ -32,6 +32,7 @@ export default function AssignmentForm() {
     if (formData.totalMarks < 1) newErrors.totalMarks = 'Must be a positive number';
     if (formData.totalMarks < formData.numberOfQuestions)
       newErrors.totalMarks = 'Total marks must be ≥ number of questions';
+    if (!(formData as any).duration || Number((formData as any).duration) <= 0) newErrors.duration = 'Enter duration in minutes';
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -63,6 +64,7 @@ export default function AssignmentForm() {
       fd.append('title', formData.title);
       fd.append('subject', formData.subject);
       fd.append('grade', formData.grade);
+    fd.append('duration', String((formData as any).duration || ''));
       fd.append('topic', formData.topic);
       fd.append('dueDate', formData.dueDate);
       fd.append('questionTypes', JSON.stringify(formData.questionTypes));
@@ -241,6 +243,20 @@ export default function AssignmentForm() {
                 </button>
               ))}
             </div>
+          </div>
+        </div>
+
+        <div className="form-row">
+          <div className="form-group" style={{ maxWidth: 260 }}>
+            <label className="form-label">Time Allowed (minutes) *</label>
+            <input
+              type="number"
+              className="form-input"
+              min={1}
+              value={(formData as any).duration || ''}
+              onChange={(e) => setFormField('duration' as any, e.target.value)}
+            />
+            {errors.duration && <div className="form-error">⚠ {errors.duration}</div>}
           </div>
         </div>
       </div>

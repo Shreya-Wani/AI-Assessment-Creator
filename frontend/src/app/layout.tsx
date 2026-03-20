@@ -1,5 +1,6 @@
 import './globals.css';
 import { ThemeProvider } from '@/providers/ThemeProvider';
+import BottomNav from '@/components/BottomNav';
 
 export default function RootLayout({
   children,
@@ -11,6 +12,7 @@ export default function RootLayout({
       <body>
         <ThemeProvider attribute="class" defaultTheme="light">
           {children}
+          <BottomNav />
         </ThemeProvider>
       </body>
     </html>
