@@ -63,7 +63,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Serve uploaded files (for local dev). Files uploaded via multer are stored
 // in the project `uploads/` folder and served at `/uploads/<filename>`.
-app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+app.use('/uploads', express.static(path.resolve(__dirname, '../../uploads')));
 
 // Request logging
 app.use((req, _res, next) => {

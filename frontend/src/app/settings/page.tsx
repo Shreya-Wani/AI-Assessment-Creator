@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import { useTheme } from 'next-themes';
 import AuthGuard from '@/components/AuthGuard';
 import { useAuthStore } from '@/store/useAuthStore';
+import { getUserAvatar } from '@/lib/avatar';
 
 const presetAvatars = [
   { id: 'female-1', label: 'Female Avatar 1', url: 'https://api.dicebear.com/7.x/lorelei/svg?seed=Ava&backgroundColor=fde68a' },
@@ -51,9 +52,8 @@ function SettingsContent() {
   const currentAvatar = useMemo(() => {
     if (avatarPreview) return avatarPreview;
     if (selectedPresetAvatar) return selectedPresetAvatar;
-    if (user?.avatarUrl) return user.avatarUrl;
-    return `https://api.dicebear.com/7.x/notionists/svg?seed=${user?.email || 'teacher'}`;
-  }, [avatarPreview, selectedPresetAvatar, user?.avatarUrl, user?.email]);
+    return getUserAvatar(user);
+  }, [avatarPreview, selectedPresetAvatar, user]);
 
   const onAvatarSelect = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];

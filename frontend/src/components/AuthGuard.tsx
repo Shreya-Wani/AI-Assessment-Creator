@@ -5,7 +5,10 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { token } = useAuthStore();
+  const token = useAuthStore((s) => s.token);
+  const user = useAuthStore((s) => s.user);
+  const fetchMe = useAuthStore((s) => s.fetchMe);
+  const logout = useAuthStore((s) => s.logout);
   const router = useRouter();
 
   useEffect(() => {
@@ -13,6 +16,15 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
       router.replace('/login');
     }
   }, [token, router]);
+
+  useEffect(() => {
+    if (!token || user) return;
+
+    fetchMe().catch(() => {
+      logout();
+      router.replace('/login');
+    });
+  }, [token, user, fetchMe, logout, router]);
 
   if (!token) {
     return (

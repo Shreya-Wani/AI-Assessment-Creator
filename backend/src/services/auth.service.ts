@@ -35,6 +35,20 @@ export interface UpdateProfileData {
   avatarUrl?: string;
 }
 
+const buildDefaultAvatarUrl = (seed: string): string => {
+  return `https://api.dicebear.com/7.x/notionists/svg?seed=${encodeURIComponent(seed)}`;
+};
+
+const ensurePersistentAvatar = async (user: IUser): Promise<IUser> => {
+  if (typeof user.avatarUrl === 'string' && user.avatarUrl.trim()) {
+    return user;
+  }
+
+  user.avatarUrl = buildDefaultAvatarUrl(user.email || user._id.toString());
+  await user.save();
+  return user;
+};
+
 // ── Private Helpers ───────────────────────────────────────────────────
 
 const generateToken = (id: string, role: string): string => {
@@ -87,6 +101,7 @@ export const registerService = async (data: RegisterData): Promise<AuthResponse>
     passwordHash: hashedPassword,
     schoolName: data.schoolName,
     location: data.location,
+    avatarUrl: buildDefaultAvatarUrl(data.email),
     role: safeRole,
   });
 
@@ -110,14 +125,20 @@ export const loginService = async (data: LoginData): Promise<AuthResponse> => {
     throw new AppError('Invalid email or password', 401);
   }
 
-  logger.info({ userId: user._id }, '[AUTH] User logged in');
-  return toAuthResponse(user);
+  const normalizedUser = await ensurePersistentAvatar(user);
+
+  logger.info({ userId: normalizedUser._id }, '[AUTH] User logged in');
+  return toAuthResponse(normalizedUser);
 };
 
 export const getUserByIdService = async (userId: string): Promise<IUser> => {
-  const user = await User.findById(userId).select('-passwordHash');
+  const user = await User.findById(userId);
   if (!user) throw new AppError('User not found', 404);
-  return user;
+
+  const normalizedUser = await ensurePersistentAvatar(user);
+  const sanitized = await User.findById(normalizedUser._id).select('-passwordHash');
+  if (!sanitized) throw new AppError('User not found', 404);
+  return sanitized;
 };
 
 export const updateUserProfileService = async (userId: string, data: UpdateProfileData): Promise<IUser> => {
@@ -133,7 +154,7 @@ export const updateUserProfileService = async (userId: string, data: UpdateProfi
   }
 
   if (typeof data.avatarUrl === 'string' && data.avatarUrl.trim()) {
-    user.avatarUrl = data.avatarUrl;
+    user.avatarUrl = data.avatarUrl.trim();
   }
 
   await user.save();

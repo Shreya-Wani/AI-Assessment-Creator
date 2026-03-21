@@ -5,10 +5,11 @@ import TopBar from '@/components/TopBar';
 import { motion } from 'framer-motion';
 import AuthGuard from '@/components/AuthGuard';
 import { useAuthStore } from '@/store/useAuthStore';
+import { getUserAvatar } from '@/lib/avatar';
 
 function ProfileContent() {
   const { user } = useAuthStore();
-  const avatarSrc = user?.avatarUrl || `https://api.dicebear.com/7.x/notionists/svg?seed=${user?.email || 'Teacher'}`;
+  const avatarSrc = getUserAvatar(user);
 
   return (
     <div className="app-layout">

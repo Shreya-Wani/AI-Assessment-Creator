@@ -8,6 +8,7 @@ import BrandLogo from './BrandLogo';
 import { joinJob, leaveJob, onCompleted, onError, onProgress } from '@/lib/socket';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import { useAssignmentStore } from '@/store/useAssignmentStore';
+import { getUserAvatar } from '@/lib/avatar';
 
 export default function TopBar({ title }: { title: string }) {
   const router = useRouter();
@@ -22,7 +23,7 @@ export default function TopBar({ title }: { title: string }) {
   const progressMilestoneRef = useRef<Record<string, number>>({});
 
   const unreadCount = useMemo(() => notificationItems.filter((item) => !item.read).length, [notificationItems]);
-  const avatarSrc = user?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?._id ?? 'user'}`;
+  const avatarSrc = getUserAvatar(user);
 
   useEffect(() => {
     const activeJobId = currentAssignment?.jobId;

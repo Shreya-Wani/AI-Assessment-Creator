@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const API_ORIGIN = API_URL.replace(/\/api\/?$/, '');
 
 const apiFetch = async (path: string, options: RequestInit = {}) => {
   const res = await fetch(`${API_URL}${path}`, {
@@ -33,12 +34,27 @@ interface AuthState {
   isLoading: boolean;
   error: string | null;
 
+  fetchMe: () => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, schoolName: string, location: string, role?: string) => Promise<void>;
   updateProfile: (payload: { schoolName: string; location: string; avatar?: File | null; avatarUrl?: string }) => Promise<void>;
   logout: () => void;
   clearError: () => void;
 }
+
+const normalizeAvatarUrl = (avatarUrl?: string): string | undefined => {
+  if (!avatarUrl) return avatarUrl;
+  if (avatarUrl.startsWith('/uploads/')) return `${API_ORIGIN}${avatarUrl}`;
+  return avatarUrl;
+};
+
+const normalizeUser = <T extends User | null>(user: T): T => {
+  if (!user) return user;
+  return {
+    ...user,
+    avatarUrl: normalizeAvatarUrl(user.avatarUrl),
+  };
+};
 
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -48,6 +64,32 @@ export const useAuthStore = create<AuthState>()(
       isLoading: false,
       error: null,
 
+      fetchMe: async () => {
+        const token = useAuthStore.getState().token;
+        if (!token) {
+          throw new Error('You are not logged in');
+        }
+
+        try {
+          const res = await fetch(`${API_URL}/auth/me`, {
+            method: 'GET',
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          const data = await res.json();
+          if (!res.ok) {
+            throw new Error(data.error || 'Failed to fetch profile');
+          }
+
+          set((state) => ({ user: normalizeUser(data), token: state.token, error: null }));
+        } catch (error: unknown) {
+          set({ error: toErrorMessage(error, 'Failed to fetch profile') });
+          throw error;
+        }
+      },
+
       login: async (email: string, password: string) => {
         set({ isLoading: true, error: null });
         try {
@@ -55,7 +97,7 @@ export const useAuthStore = create<AuthState>()(
             method: 'POST',
             body: JSON.stringify({ email, password }),
           });
-          set({ user: data, token: data.token, isLoading: false });
+          set({ user: normalizeUser(data), token: data.token, isLoading: false });
         } catch (error: unknown) {
           const message = toErrorMessage(error, 'Login failed');
           set({ error: message, isLoading: false });
@@ -73,7 +115,7 @@ export const useAuthStore = create<AuthState>()(
           });
           const data = await res.json();
           if (!res.ok) throw new Error(data.error || 'Registration failed');
-          set({ user: data, token: data.token, isLoading: false });
+          set({ user: normalizeUser(data), token: data.token, isLoading: false });
         } catch (error: unknown) {
           set({ isLoading: false, error: toErrorMessage(error, 'Registration failed') });
           throw error;
@@ -110,7 +152,7 @@ export const useAuthStore = create<AuthState>()(
             throw new Error(data.error || 'Failed to update profile');
           }
 
-          set((state) => ({ user: data, isLoading: false, error: null, token: state.token }));
+          set((state) => ({ user: normalizeUser(data), isLoading: false, error: null, token: state.token }));
         } catch (error: unknown) {
           set({ isLoading: false, error: toErrorMessage(error, 'Failed to update profile') });
           throw error;

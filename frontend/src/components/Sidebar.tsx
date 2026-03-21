@@ -6,13 +6,14 @@ import { usePathname } from 'next/navigation';
 import { useAuthStore } from '../store/useAuthStore';
 import { useUIStore } from '../store/useUIStore';
 import BrandLogo from './BrandLogo';
+import { getUserAvatar } from '@/lib/avatar';
 
 export default function Sidebar() {
   const pathname = usePathname();
   const user = useAuthStore((s) => s.user);
   const isOpen = useUIStore((s) => s.mobileSidebarOpen);
   const close = useUIStore((s) => s.close);
-  const avatarSrc = user?.avatarUrl || `https://api.dicebear.com/7.x/notionists/svg?seed=${user?.email || 'Teacher'}`;
+  const avatarSrc = getUserAvatar(user);
 
   return (
     <>

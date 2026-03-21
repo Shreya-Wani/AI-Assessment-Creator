@@ -1,13 +1,18 @@
 import express from 'express';
+import fs from 'fs';
 import path from 'path';
 import multer from 'multer';
 import { registerUser, loginUser, getMe, updateMe } from '../controllers/authController';
 import { protect } from '../middleware/authMiddleware';
 
 const router = express.Router();
+const uploadDir = path.resolve(__dirname, '../../../uploads');
+fs.mkdirSync(uploadDir, { recursive: true });
 
 const storage = multer.diskStorage({
-	destination: 'uploads/',
+	destination: (_req, _file, cb) => {
+		cb(null, uploadDir);
+	},
 	filename: (_req, file, cb) => {
 		const ext = path.extname(file.originalname || '').toLowerCase() || '.png';
 		cb(null, `avatar-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`);
