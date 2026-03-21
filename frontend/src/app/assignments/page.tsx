@@ -116,8 +116,10 @@ function AssignmentsContent() {
                   whileHover={{ scale: 1.05 }} 
                   whileTap={{ scale: 0.95 }}
                   className="floating-create-btn"
+                  aria-label="Create Assignment"
                 >
-                  <span style={{ fontSize: 16 }}>+</span> Create Assignment
+                  <span className="floating-create-plus">+</span>
+                  <span className="floating-create-text">Create Assignment</span>
                 </motion.div>
               </Link>
             </>

@@ -3,8 +3,14 @@ import { IAssignment } from '../assignment/assignment.model';
 export const buildPrompt = (assignment: IAssignment): string => {
   const configs = assignment.questionsConfig.map(c => `${c.count} questions of type ${c.type} (${c.marks} marks each)`).join(', ');
 
-  const contentSection = assignment.extractedContent 
-    ? `**Study Material/Subject Content:**\n${assignment.extractedContent}\n\n`
+  const MAX_PROMPT_CONTENT = 12000;
+  const extracted = (assignment.extractedContent || '').trim();
+  const clippedContent = extracted.length > MAX_PROMPT_CONTENT
+    ? `${extracted.slice(0, MAX_PROMPT_CONTENT)}\n\n[Content clipped for speed]`
+    : extracted;
+
+  const contentSection = clippedContent
+    ? `**Study Material/Subject Content:**\n${clippedContent}\n\n`
     : '';
 
   return `You are an expert academic assessment generator. Create a structured exam based on the following configurations:

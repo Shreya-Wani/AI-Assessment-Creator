@@ -3,19 +3,29 @@ import { Response } from 'express';
 
 // Generate a clean, printable PDF without difficulty labels (only question text and marks).
 export const generatePdf = (assignment: any, res: Response, user?: any) => {
-  const doc = new PDFDocument({ margin: 56, size: 'A4' });
+  const doc = new PDFDocument({ margin: 64, size: 'A4' });
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', `attachment; filename="${(assignment.title || 'Assessment').replace(/[^a-z0-9\- ]/gi, '')}.pdf"`);
   doc.pipe(res);
 
-  // Header
-  doc.font('Helvetica-Bold').fontSize(20).text(assignment.title || 'Assessment Paper', { align: 'center' });
-  doc.moveDown(0.3);
+  const pageBottomPadding = 72;
+  const contentWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+  const ensureSpace = (minSpace: number) => {
+    if (doc.y + minSpace > doc.page.height - pageBottomPadding) {
+      doc.addPage();
+    }
+  };
 
+  // Header
   const school = (user && (user.schoolName || user.name)) || assignment.schoolName || '';
   if (school) {
-    doc.font('Helvetica').fontSize(12).fillColor('#111').text(school, { align: 'center' });
-    doc.moveDown(0.2);
+    doc.font('Helvetica-Bold').fontSize(24).fillColor('#111').text(school, { align: 'center' });
+    doc.moveDown(0.25);
+  }
+
+  if (assignment.title) {
+    doc.font('Helvetica').fontSize(12).fillColor('#334155').text(assignment.title, { align: 'center' });
+    doc.moveDown(0.5);
   }
 
   const subject = assignment.result?.subject || assignment.subject || '';
@@ -29,73 +39,80 @@ export const generatePdf = (assignment: any, res: Response, user?: any) => {
   } catch {}
 
   // Sub header (centered)
-  doc.font('Helvetica-Bold').fontSize(12).text(subject ? `${subject}` : '', { align: 'center' });
-  if (grade) doc.font('Helvetica').fontSize(11).text(`Class: ${grade}`, { align: 'center' });
-  doc.moveDown(0.5);
+  doc.font('Helvetica-Bold').fontSize(14).fillColor('#111').text(subject ? `Subject: ${subject}` : '', { align: 'center' });
+  if (grade) doc.font('Helvetica-Bold').fontSize(13).text(`Class: ${grade}`, { align: 'center' });
+  doc.moveDown(0.8);
 
   // Metadata row
-  doc.font('Helvetica').fontSize(10).fillColor('#444');
+  doc.font('Helvetica-Bold').fontSize(11).fillColor('#1f2937');
   const left = `Time Allowed: ${duration || '—'}`;
   const right = `Maximum Marks: ${totalMarks || '—'}`;
   doc.text(left, { align: 'left' });
   doc.text(right, { align: 'right' });
-  doc.moveDown(0.8);
+  doc.moveDown(0.45);
 
   if (examDateFormatted) {
-    doc.font('Helvetica').fontSize(10).fillColor('#444').text(`Exam Date: ${examDateFormatted}`, { align: 'left' });
-    doc.moveDown(0.5);
+    doc.font('Helvetica').fontSize(10).fillColor('#475569').text(`Exam Date: ${examDateFormatted}`, { align: 'left' });
+    doc.moveDown(0.4);
   }
 
+  // Divider
+  doc.moveTo(doc.page.margins.left, doc.y).lineTo(doc.page.width - doc.page.margins.right, doc.y).strokeColor('#CBD5E1').lineWidth(1).stroke();
+  doc.moveDown(0.8);
+
   // Student info lines
-  doc.moveDown(0.4);
-  const lineY = doc.y;
-  doc.font('Helvetica').fontSize(11).fillColor('#000').text('Name: _________________________', { continued: true });
-  doc.text('   ', { continued: true });
-  doc.text('Roll Number: ___________________', { align: 'right' });
-  doc.moveDown(0.6);
+  doc.font('Helvetica-Bold').fontSize(11).fillColor('#1f2937').text('All questions are compulsory unless stated otherwise.');
+  doc.moveDown(0.8);
+  doc.font('Helvetica-Bold').fontSize(11).fillColor('#111827').text('Name: _________________________');
+  doc.moveDown(0.25);
+  doc.text('Roll Number: ___________________');
+  doc.moveDown(0.25);
+  doc.text(`Class: ${grade || '______'}    Section: ___________`);
+  doc.moveDown(0.9);
 
   // Iterate sections and questions. Only include question text and marks (no difficulty labels).
   assignment.result.sections.forEach((section: any, sIdx: number) => {
-    doc.moveDown(0.4);
-    doc.font('Helvetica-Bold').fontSize(14).fillColor('#111').text(section.title);
-    doc.moveDown(0.2);
+    ensureSpace(120);
+    doc.font('Helvetica-Bold').fontSize(18).fillColor('#0f172a').text(section.title, { align: 'center' });
+    doc.moveDown(0.55);
     if (section.instructions) {
-      doc.font('Helvetica-Oblique').fontSize(10).fillColor('#333').text(section.instructions);
-      doc.moveDown(0.3);
+      doc.font('Helvetica-Oblique').fontSize(11).fillColor('#475569').text(section.instructions, { lineGap: 2 });
+      doc.moveDown(0.45);
     }
 
     section.questions.forEach((q: any, i: number) => {
+      ensureSpace(70);
       // Sanitize question text: remove any embedded difficulty words or bracketed difficulty markers
       let text = String(q.question || q.text || '').replace(/[\[\(]\s*\d+\s*Marks?\s*[\)\]]/gi, '').trim();
       // Remove trailing difficulty tokens like ' - easy' or '(easy)'
       text = text.replace(/\s*[-—–:]?\s*(easy|medium|hard)\s*$/i, '').trim();
 
       const marks = q.marks || q.mark || '';
-      doc.font('Helvetica').fontSize(11).fillColor('#000').text(`${i + 1}. ${text}`, { continued: true });
+      doc.font('Helvetica').fontSize(12).fillColor('#111827').text(`${i + 1}. ${text}`, { width: contentWidth, lineGap: 3, continued: true });
       if (marks !== '') {
-        doc.text(`  [${marks} Marks]`);
+        doc.font('Helvetica-Bold').text(`  [${marks} Marks]`);
       } else {
         doc.text('');
       }
-      doc.moveDown(0.15);
+      doc.moveDown(0.35);
 
       // If options exist, print them on separate indented lines
       if (Array.isArray(q.options) && q.options.length > 0) {
         q.options.forEach((opt: string, oi: number) => {
-          doc.font('Helvetica').fontSize(11).fillColor('#111').text(`   ${String.fromCharCode(65 + oi)}. ${opt}`, { indent: 16 });
-          doc.moveDown(0.05);
+          ensureSpace(26);
+          doc.font('Helvetica').fontSize(11).fillColor('#1f2937').text(`   ${String.fromCharCode(65 + oi)}. ${opt}`, { indent: 18, lineGap: 2 });
+          doc.moveDown(0.18);
         });
       }
 
-      doc.moveDown(0.2);
-      // Page break if near bottom
-      if (doc.y > doc.page.height - 100) doc.addPage();
+      doc.moveDown(0.42);
     });
 
-    doc.moveDown(0.6);
+    doc.moveDown(0.5);
   });
 
-  doc.moveDown(0.6);
+  ensureSpace(40);
+  doc.moveDown(0.4);
   doc.font('Helvetica-Bold').fontSize(11).fillColor('#666').text('── End of Question Paper ──', { align: 'center' });
 
   doc.end();

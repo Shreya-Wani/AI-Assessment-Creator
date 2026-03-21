@@ -22,12 +22,6 @@ function getStatusText(progress: number) {
   return 'Completed ✅';
 }
 
-const difficultyColors: Record<string, string> = {
-  easy: '#22c55e',
-  medium: '#eab308',
-  hard: '#ef4444',
-};
-
 function ProgressBar({ progress }: { progress: number }) {
   return (
     <div style={{ width: '100%', height: 8, borderRadius: 4, background: 'var(--border-strong)', overflow: 'hidden', marginTop: 16 }}>
@@ -36,6 +30,42 @@ function ProgressBar({ progress }: { progress: number }) {
         transition={{ duration: 0.6, ease: 'easeOut' }}
         style={{ height: '100%', borderRadius: 4, background: progress >= 100 ? 'linear-gradient(90deg, #22c55e, #16a34a)' : 'linear-gradient(90deg, #f97316, #f59e0b)' }}
       />
+    </div>
+  );
+}
+
+function CircularProgress({ progress }: { progress: number }) {
+  const clamped = Math.max(0, Math.min(100, Math.round(progress)));
+  const radius = 46;
+  const circumference = 2 * Math.PI * radius;
+  const dashOffset = circumference - (clamped / 100) * circumference;
+
+  return (
+    <div className="ai-progress-circle-wrap" aria-label={`Progress ${clamped}%`}>
+      <svg width="120" height="120" viewBox="0 0 120 120" className="ai-progress-circle-svg">
+        <defs>
+          <linearGradient id="ai-progress-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#22c55e" />
+            <stop offset="50%" stopColor="#06b6d4" />
+            <stop offset="100%" stopColor="#3b82f6" />
+          </linearGradient>
+        </defs>
+        <circle cx="60" cy="60" r={radius} className="ai-progress-track" />
+        <circle
+          cx="60"
+          cy="60"
+          r={radius}
+          className="ai-progress-value"
+          stroke="url(#ai-progress-grad)"
+          strokeDasharray={circumference}
+          strokeDashoffset={dashOffset}
+        />
+      </svg>
+      <div className="ai-progress-center">
+        <div className="ai-progress-percent">{clamped}%</div>
+        <div className="ai-progress-label">Live</div>
+      </div>
+      <div className="ai-orb" />
     </div>
   );
 }
@@ -58,6 +88,16 @@ function AssessmentContent() {
   const [retryInfo, setRetryInfo] = useState<{ attempt?: number; maxAttempts?: number; willRetry?: boolean }>({});
   const [result, setResult] = useState<any>(null);
   const [fakeTickingItems, setFakeTickingItems] = useState<string[]>([]);
+
+  const generationActive =
+    generationStatus === 'processing' ||
+    generationStatus === 'pending' ||
+    currentAssignment?.status === 'pending' ||
+    currentAssignment?.status === 'processing';
+
+  const displayProgress = generationActive
+    ? Math.max(localProgress, Math.min(12, fakeTickingItems.length * 3))
+    : localProgress;
 
   useEffect(() => {
     if (!id) return;
@@ -164,6 +204,13 @@ function AssessmentContent() {
   const isGenerating = !result && !error && (generationStatus === 'processing' || generationStatus === 'pending' || currentAssignment?.status === 'pending' || currentAssignment?.status === 'processing');
 
   const sections = result?.sections || [];
+  const computedSectionMarks = sections.reduce(
+    (sectionAcc: number, section: any) =>
+      sectionAcc + (section?.questions || []).reduce((qAcc: number, q: any) => qAcc + (q?.marks || 0), 0),
+    0
+  );
+  const resolvedMaxMarks =
+    result?.totalMarks ?? currentAssignment?.totalMarks ?? (computedSectionMarks > 0 ? computedSectionMarks : '—');
 
   const sanitizeQuestionText = (text?: string) => {
     if (!text) return '';
@@ -194,20 +241,23 @@ function AssessmentContent() {
             {/* Full-screen AI processing overlay */}
             <AnimatePresence>
               {isGenerating && (
-                <motion.div key="ai-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ position: 'fixed', inset: 0, zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)', padding: 24 }}>
-                  <motion.div style={{ width: '100%', maxWidth: 720, background: 'white', borderRadius: 20, padding: 28 }} initial={{ scale: 0.98 }} animate={{ scale: 1 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                <motion.div key="ai-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="ai-overlay">
+                  <motion.div className="ai-overlay-card" initial={{ scale: 0.98, y: 8 }} animate={{ scale: 1, y: 0 }}>
+                    <div className="ai-overlay-grid">
                       <div>
-                        <div style={{ fontSize: 14, color: '#374151', fontWeight: 700 }}>{user?.schoolName || 'Your Institution'}</div>
-                        <h3 style={{ margin: '8px 0', fontSize: 20 }}>{getStatusText(localProgress)}</h3>
-                        <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: 13 }}>{localProgress}% complete</p>
+                        <div className="ai-overlay-school">{user?.schoolName || 'Your Institution'}</div>
+                        <h3 className="ai-overlay-title">{getStatusText(displayProgress)}</h3>
+                        <p className="ai-overlay-subtitle">AI is generating your paper with smart context analysis.</p>
+                        <p className="ai-overlay-note">Thank you for waiting. Larger files may take a little longer.</p>
                       </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6 }}>AI is generating your paper</div>
-                        <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{fakeTickingItems.slice(-1)[0]}</div>
+
+                      <div className="ai-overlay-right">
+                        <CircularProgress progress={displayProgress} />
+                        <div className="ai-overlay-log">{fakeTickingItems.slice(-1)[0] || 'Booting AI workflow...'}</div>
                       </div>
                     </div>
-                    <ProgressBar progress={localProgress} />
+
+                    <ProgressBar progress={displayProgress} />
                   </motion.div>
                 </motion.div>
               )}
@@ -218,6 +268,17 @@ function AssessmentContent() {
               <AnimatePresence mode="wait">
                 {result && sections.length > 0 ? (
                   <motion.div key="paper" initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+                    <div className="paper-download-banner">
+                      <div className="banner-text">
+                        Certainly! Your customized question paper is ready. Download the formatted PDF below.
+                      </div>
+                      <div className="banner-actions">
+                        <button className="btn-download-white" onClick={handleDownloadPDF}>
+                          ⬇ Download as PDF
+                        </button>
+                      </div>
+                    </div>
+
                     <div className="question-paper">
                       <div className="paper-header">
                         <div className="paper-institution">{user?.schoolName || 'Your Institution'}</div>
@@ -229,14 +290,15 @@ function AssessmentContent() {
 
                         <div className="paper-details">
                           <div>Time Allowed: {formatDuration(result?.duration ?? currentAssignment?.duration)}</div>
-                          <div>Maximum Marks: {result?.totalMarks ?? currentAssignment?.totalMarks ?? '—'}</div>
+                          <div>Maximum Marks: {resolvedMaxMarks}</div>
                         </div>
                       </div>
 
                       <div className="paper-student-info">
-                        <div className="student-field"><label className="student-field-label">Name</label><input className="student-field-input" /></div>
-                        <div className="student-field"><label className="student-field-label">Roll Number</label><input className="student-field-input" /></div>
-                        <div className="student-field"><label className="student-field-label">Class / Section</label><input className="student-field-input" /></div>
+                        <div className="paper-general-instruction">All questions are compulsory unless stated othervise.</div>
+                        <div className="student-line">Name: ____________________</div>
+                        <div className="student-line">Roll Number: ____________________</div>
+                        <div className="student-line">Class: {result?.grade || currentAssignment?.grade || '____'} Section: ________</div>
                       </div>
 
                       {sections.map((section: any, sIdx: number) => (
@@ -257,9 +319,6 @@ function AssessmentContent() {
                                 <div style={{ display: 'flex', alignItems: 'flex-start', flex: 1 }}>
                                   <span className="question-number">{qIdx + 1}.</span>
                                   <span className="question-text">{sanitizeQuestionText(q.question || q.text || '')}</span>
-                                </div>
-                                <div className="question-meta">
-                                  <span className={`question-difficulty-paper ${q.difficulty}`}>{q.difficulty}</span>
                                 </div>
                               </div>
 

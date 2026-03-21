@@ -66,7 +66,6 @@ function HomeContent() {
     if (!formData.title?.trim())    e.title    = 'Title is required';
     if (!formData.subject?.trim())  e.subject  = 'Subject is required';
     if (!formData.grade?.trim())    e.grade    = 'Grade is required';
-    if (!formData.dueDate)          e.dueDate  = 'Due date is required';
     if (!(formData as any).examDate) e.examDate = 'Exam date & time is required';
     if (!(formData as any).duration || Number((formData as any).duration) <= 0)
       e.duration = 'Duration is required';
@@ -92,9 +91,11 @@ function HomeContent() {
         subject:     formData.subject,
         grade:       formData.grade,
         topic:       formData.topic || '',
-        dueDate:     formData.dueDate,
+        dueDate:     (formData as any).examDate ? String((formData as any).examDate).slice(0, 10) : new Date().toISOString().slice(0, 10),
         examDate:    (formData as any).examDate || '',
         duration:    (formData as any).duration || '',
+        totalMarks:  totalM,
+        numberOfQuestions: totalQ,
         questionsConfig,
         instructions: formData.additionalInstructions || '',
         fileUrl: '',
@@ -243,17 +244,8 @@ function HomeContent() {
               </Field>
             </motion.div>
 
-            {/* Due Date + Exam Date + Duration in one row */}
-            <motion.div variants={itemVariants} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
-              <Field label="Due Date *" error={errors.dueDate}>
-                <input
-                  type="date"
-                  className="form-input"
-                  value={formData.dueDate || ''}
-                  onChange={(e) => setFormField('dueDate', e.target.value)}
-                />
-              </Field>
-
+            {/* Exam Date + Duration in one row */}
+            <motion.div variants={itemVariants} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               <Field label="Exam Date & Time *" error={errors.examDate}>
                 <input
                   type="datetime-local"
