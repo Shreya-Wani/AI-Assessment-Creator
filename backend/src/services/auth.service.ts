@@ -11,7 +11,6 @@ export interface RegisterData {
   password: string;
   schoolName: string;
   location: string;
-  role?: string;
 }
 
 export interface LoginData {
@@ -93,19 +92,16 @@ export const registerService = async (data: RegisterData): Promise<AuthResponse>
   // Hash password (bcrypt with salt rounds = 10)
   const hashedPassword = await bcrypt.hash(data.password, 10);
 
-  // Sanitize role
-  const safeRole = data.role === 'STUDENT' ? 'STUDENT' : 'TEACHER';
-
   const user = await User.create({
     email: data.email,
     passwordHash: hashedPassword,
     schoolName: data.schoolName,
     location: data.location,
     avatarUrl: buildDefaultAvatarUrl(data.email),
-    role: safeRole,
+    role: 'TEACHER',
   });
 
-  logger.info({ userId: user._id, role: safeRole }, '[AUTH] User registered');
+  logger.info({ userId: user._id, role: 'TEACHER' }, '[AUTH] User registered');
   return toAuthResponse(user);
 };
 

@@ -4,6 +4,6 @@ import { explainStudentAnswer } from '../controllers/toolkitController';
 
 const router = express.Router();
 
-router.post('/answer-helper', protect, authorizeRoles(Role.TEACHER, Role.STUDENT), explainStudentAnswer);
+router.post('/answer-helper', protect, authorizeRoles(Role.TEACHER), explainStudentAnswer);
 
 export default router;

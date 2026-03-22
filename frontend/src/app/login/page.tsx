@@ -14,14 +14,13 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [schoolName, setSchoolName] = useState('');
   const [location, setLocation] = useState('');
-  const [role, setRole] = useState<'TEACHER' | 'STUDENT'>('TEACHER');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     clearError();
     try {
       if (isRegister) {
-        await register(email, password, schoolName, location, role);
+        await register(email, password, schoolName, location);
       } else {
         await login(email, password);
       }
@@ -111,26 +110,6 @@ export default function LoginPage() {
                     type="text" placeholder="Location" required value={location} onChange={e => setLocation(e.target.value)}
                     style={inputStyle}
                   />
-                  <div style={{ display: 'flex', gap: 12 }}>
-                    {(['TEACHER', 'STUDENT'] as const).map(r => (
-                      <motion.button
-                        key={r}
-                        type="button"
-                        whileHover={{ scale: 1.03 }}
-                        whileTap={{ scale: 0.97 }}
-                        onClick={() => setRole(r)}
-                            style={{
-                            flex: 1, padding: '12px 0', borderRadius: 12, cursor: 'pointer',
-                            border: role === r ? '2px solid #f97316' : '1px solid #e2e8f0',
-                            background: role === r ? '#fff7ed' : '#f8fafc',
-                            color: role === r ? '#f97316' : '#6b7280',
-                            fontSize: 13, fontWeight: 600, transition: 'all 0.2s',
-                            }}
-                      >
-                        {r === 'TEACHER' ? '🧑‍🏫 Teacher' : '🎓 Student'}
-                      </motion.button>
-                    ))}
-                  </div>
                 </motion.div>
               )}
             </AnimatePresence>

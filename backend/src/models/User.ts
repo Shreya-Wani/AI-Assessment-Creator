@@ -6,7 +6,7 @@ export interface IUser extends Document {
   schoolName: string;
   location: string;
   avatarUrl?: string;
-  role: 'TEACHER' | 'STUDENT';
+  role: 'TEACHER';
   createdAt: Date;
 }
 
@@ -16,7 +16,7 @@ const UserSchema = new Schema<IUser>({
   schoolName: { type: String, required: true },
   location: { type: String, required: true },
   avatarUrl: { type: String },
-  role: { type: String, enum: ['TEACHER', 'STUDENT'], default: 'TEACHER' }
+  role: { type: String, enum: ['TEACHER'], default: 'TEACHER' }
 }, { timestamps: true });
 
 export const User = mongoose.model<IUser>('User', UserSchema);

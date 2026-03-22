@@ -16,6 +16,7 @@ type GeneratedQuestion = {
   text?: string;
   marks?: number;
   options?: string[];
+  difficulty?: string;
 };
 
 type GeneratedSection = {
@@ -107,6 +108,7 @@ function AssessmentContent() {
   const [result, setResult] = useState<GeneratedPaper | null>(null);
   const [fakeTickingItems, setFakeTickingItems] = useState<string[]>([]);
   const [processFeed, setProcessFeed] = useState<Array<{ id: string; text: string }>>([]);
+  const [isRegenerating, setIsRegenerating] = useState(false);
 
   const pushProcess = useCallback((text: string) => {
     setProcessFeed((prev) => {
@@ -257,6 +259,33 @@ function AssessmentContent() {
     } catch (err) { console.error('PDF download error:', err); }
   }, [id, currentAssignment]);
 
+  const handleRegenerate = useCallback(async () => {
+    try {
+      setIsRegenerating(true);
+      const res = await apiFetch(`/assignments/${id}/regenerate`, { method: 'POST' });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Regenerate failed');
+      }
+
+      const data = await res.json();
+      setJobId(data.jobId || null);
+      setResult(null);
+      setError(false);
+      setLocalProgress(0);
+      setFakeTickingItems([]);
+      setProcessFeed([]);
+      updateProgress(0, 'pending');
+      pushProcess('Regeneration started. Waiting for live updates.');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to regenerate';
+      setError(true);
+      pushProcess(`Regeneration failed: ${message}`);
+    } finally {
+      setIsRegenerating(false);
+    }
+  }, [id, updateProgress, pushProcess]);
+
   const isGenerating = !result && !error && (generationStatus === 'processing' || generationStatus === 'pending' || currentAssignment?.status === 'pending' || currentAssignment?.status === 'processing');
 
   const sections: GeneratedSection[] = result?.sections || [];
@@ -283,6 +312,25 @@ function AssessmentContent() {
       return d;
     }
     return String(d);
+  };
+
+  const normalizeDifficulty = (difficulty?: string): 'easy' | 'medium' | 'hard' | null => {
+    if (!difficulty) return null;
+    const value = difficulty.toLowerCase().trim();
+    if (value.includes('easy')) return 'easy';
+    if (value.includes('medium')) return 'medium';
+    if (value.includes('hard')) return 'hard';
+    return null;
+  };
+
+  const difficultyStyle = (difficulty: 'easy' | 'medium' | 'hard') => {
+    if (difficulty === 'easy') {
+      return { background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0' };
+    }
+    if (difficulty === 'medium') {
+      return { background: '#fffbeb', color: '#b45309', border: '1px solid #fde68a' };
+    }
+    return { background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca' };
   };
 
   return (
@@ -340,6 +388,9 @@ function AssessmentContent() {
                         Certainly! Your customized question paper is ready. Download the formatted PDF below.
                       </div>
                       <div className="banner-actions">
+                        <button className="btn-nav-prev" onClick={handleRegenerate} disabled={isRegenerating || isGenerating}>
+                          {isRegenerating ? 'Regenerating...' : '↻ Regenerate'}
+                        </button>
                         <button className="btn-download-white" onClick={handleDownloadPDF}>
                           ⬇ Download as PDF
                         </button>
@@ -387,6 +438,15 @@ function AssessmentContent() {
                                   <span className="question-number">{qIdx + 1}.</span>
                                   <span className="question-text">{sanitizeQuestionText(q.question || q.text || '')}</span>
                                 </div>
+                                {(() => {
+                                  const level = normalizeDifficulty(q.difficulty);
+                                  if (!level) return null;
+                                  return (
+                                    <span style={{ ...difficultyStyle(level), borderRadius: 999, fontSize: 11, fontWeight: 700, padding: '4px 8px', marginLeft: 8, textTransform: 'uppercase', letterSpacing: 0.35 }}>
+                                      {level}
+                                    </span>
+                                  );
+                                })()}
                               </div>
 
                               {q.options && q.options.length > 0 && (

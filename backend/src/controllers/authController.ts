@@ -6,9 +6,9 @@ import * as authService from '../services/auth.service';
 // POST /auth/register
 export const registerUser = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { email, password, schoolName, location, role } = req.body;
+    const { email, password, schoolName, location } = req.body;
     const userData = await authService.registerService({
-      email, password, schoolName, location, role,
+      email, password, schoolName, location,
     });
     res.status(201).json(userData);
   } catch (error: any) {

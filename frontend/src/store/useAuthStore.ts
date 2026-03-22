@@ -25,7 +25,7 @@ interface User {
   schoolName: string;
   location: string;
   avatarUrl?: string;
-  role: 'TEACHER' | 'STUDENT';
+  role: 'TEACHER';
 }
 
 interface AuthState {
@@ -36,7 +36,7 @@ interface AuthState {
 
   fetchMe: () => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, schoolName: string, location: string, role?: string) => Promise<void>;
+  register: (email: string, password: string, schoolName: string, location: string) => Promise<void>;
   updateProfile: (payload: { schoolName: string; location: string; avatar?: File | null; avatarUrl?: string }) => Promise<void>;
   logout: () => void;
   clearError: () => void;
@@ -105,13 +105,13 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      register: async (email, password, schoolName, location, role = 'TEACHER') => {
+      register: async (email, password, schoolName, location) => {
         set({ isLoading: true, error: null });
         try {
           const res = await fetch(`${API_URL}/auth/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password, schoolName, location, role }),
+            body: JSON.stringify({ email, password, schoolName, location }),
           });
           const data = await res.json();
           if (!res.ok) throw new Error(data.error || 'Registration failed');

@@ -36,7 +36,6 @@ export const protect = async (req: AuthRequest, res: Response, next: NextFunctio
 
 export enum Role {
   TEACHER = 'TEACHER',
-  STUDENT = 'STUDENT',
 }
 
 export const authorizeRoles = (...roles: Role[]) => {
