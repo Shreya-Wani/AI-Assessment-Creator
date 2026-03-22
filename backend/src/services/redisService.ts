@@ -13,8 +13,8 @@ export function getRedisConnection(): IORedis {
     const options: RedisOptions = {
       maxRetriesPerRequest: null, // REQUIRED for BullMQ
       retryStrategy: (times: number) => {
-        if (times > 3) return null;
-        return Math.min(times * 200, 2000);
+        // Keep retrying in production; transient DNS/network failures are common.
+        return Math.min(times * 500, 10000);
       },
     };
 
