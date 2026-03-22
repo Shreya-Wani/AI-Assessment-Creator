@@ -1,6 +1,6 @@
 import { useAuthStore } from '@/store/useAuthStore';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://ai-assessment-creator-25u7.onrender.com/api';
 
 export const apiFetch = async (path: string, options: RequestInit = {}): Promise<Response> => {
   const token = useAuthStore.getState().token;
