@@ -39,7 +39,7 @@ export default function Sidebar() {
           <span style={{ opacity: pathname.includes('/assignment') ? 1 : 0.6 }}>📄</span> Assignments
         </Link>
         <Link href="/toolkit" className={`nav-item ${pathname === '/toolkit' ? 'active' : ''}`} onClick={close}>
-          <span style={{ opacity: pathname === '/toolkit' ? 1 : 0.6 }}>🤖</span> AI Teacher's Toolkit
+          <span style={{ opacity: pathname === '/toolkit' ? 1 : 0.6 }}>🤖</span> AI Teacher&apos;s Toolkit
         </Link>
         <Link href="/library" className={`nav-item ${pathname === '/library' ? 'active' : ''}`} onClick={close}>
           <span style={{ opacity: pathname === '/library' ? 1 : 0.6 }}>⏱️</span> My Library

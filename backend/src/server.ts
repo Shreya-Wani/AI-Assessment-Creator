@@ -21,6 +21,7 @@ import { getJobStatus } from './modules/assignment/assignment.controller';
 import { protect } from './middleware/authMiddleware';
 import { requestIdMiddleware } from './middleware/requestId';
 import logger from './utils/logger';
+import { UPLOADS_DIR, ensureUploadsDir } from './config/paths';
 
 const app = express();
 const httpServer = createServer(app);
@@ -61,9 +62,8 @@ app.use('/api/', limiter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Serve uploaded files (for local dev). Files uploaded via multer are stored
-// in the project `uploads/` folder and served at `/uploads/<filename>`.
-app.use('/uploads', express.static(path.resolve(__dirname, '../../uploads')));
+// Serve uploaded files from a single absolute directory shared with multer.
+app.use('/uploads', express.static(UPLOADS_DIR));
 
 // Request logging
 app.use((req, _res, next) => {
@@ -103,6 +103,7 @@ app.use((err: any, req: express.Request, res: express.Response, _next: express.N
 // ── Server Bootstrap ──────────────────────────────────────────────────
 async function start() {
   try {
+    ensureUploadsDir();
     await mongoose.connect(config.mongodbUri);
     logger.info('MongoDB connected');
 

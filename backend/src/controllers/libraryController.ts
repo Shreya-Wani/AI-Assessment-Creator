@@ -120,7 +120,17 @@ export const uploadFile = async (req: AuthRequest, res: Response): Promise<void>
 export const deleteFile = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const user = requireUser(req);
-    await libraryService.deleteFileService(req.params.id as string, user._id.toString());
+    const deleted = await libraryService.deleteFileService(req.params.id as string, user._id.toString());
+
+    const storageKey = resolveStorageKey(deleted);
+    if (storageKey) {
+      const filePath = path.resolve('uploads', storageKey);
+      // Deleting a missing file should not fail the API; the DB record is already removed.
+      if (fs.existsSync(filePath)) {
+        await fs.promises.unlink(filePath);
+      }
+    }
+
     res.json({ message: 'File deleted' });
   } catch (error: any) {
     res.status(error.statusCode || 500).json({

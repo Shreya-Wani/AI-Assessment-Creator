@@ -13,10 +13,11 @@ import {
   previewFile,
 } from '../controllers/libraryController';
 import { protect, authorizeRoles, Role } from '../middleware/authMiddleware';
+import { UPLOADS_DIR } from '../config/paths';
 
 const router = express.Router();
 const storage = multer.diskStorage({
-  destination: 'uploads/',
+  destination: UPLOADS_DIR,
   filename: (_req, file, cb) => {
     const ext = path.extname(file.originalname || '') || '';
     cb(null, `library-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`);

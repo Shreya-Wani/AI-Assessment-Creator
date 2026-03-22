@@ -55,7 +55,7 @@ export function onProgress(
 }
 
 export function onCompleted(
-  callback: (data: { assignmentId: string; result: any }) => void
+  callback: (data: { assignmentId: string; result: unknown }) => void
 ): () => void {
   const s = getSocket();
   s.on('assignment:completed', callback);

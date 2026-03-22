@@ -19,6 +19,7 @@ export default function TopBar({ title }: { title: string }) {
   const addNotification = useNotificationStore((s) => s.addNotification);
   const markAllRead = useNotificationStore((s) => s.markAllRead);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [nowTs, setNowTs] = useState(() => Date.now());
   const menuRef = useRef<HTMLDivElement>(null);
   const progressMilestoneRef = useRef<Record<string, number>>({});
 
@@ -32,6 +33,14 @@ export default function TopBar({ title }: { title: string }) {
     joinJob(activeJobId);
     return () => leaveJob(activeJobId);
   }, [currentAssignment?.jobId]);
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setNowTs(Date.now());
+    }, 60000);
+
+    return () => clearInterval(intervalId);
+  }, []);
 
   useEffect(() => {
     const unsubProgress = onProgress((data) => {
@@ -88,7 +97,7 @@ export default function TopBar({ title }: { title: string }) {
   };
 
   const formatTimeAgo = (timestamp: number) => {
-    const diffMs = Date.now() - timestamp;
+    const diffMs = nowTs - timestamp;
     const minutes = Math.floor(diffMs / 60000);
     if (minutes < 1) return 'Just now';
     if (minutes < 60) return `${minutes}m ago`;

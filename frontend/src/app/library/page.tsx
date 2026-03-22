@@ -20,6 +20,7 @@ function LibraryContent() {
     fetchFolders,
     createFolder,
     uploadToFolder,
+    deleteFile,
     clearError,
   } = useLibraryStore();
 
@@ -31,6 +32,7 @@ function LibraryContent() {
   const [isWorking, setIsWorking] = useState(false);
   const [previewUrl, setPreviewUrl] = useState('');
   const [previewTitle, setPreviewTitle] = useState('');
+  const [deletingFileId, setDeletingFileId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchFiles();
@@ -42,6 +44,14 @@ function LibraryContent() {
       setSelectedFolderId(folders[0]._id);
     }
   }, [selectedFolderId, folders]);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
 
   const filteredFiles = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -55,20 +65,24 @@ function LibraryContent() {
 
   const createFolderAction = async () => {
     if (!folderName.trim()) return;
-    setIsWorking(true);
-    await createFolder({ name: folderName.trim(), category: folderCategory });
-    await fetchFolders();
-    setFolderName('');
-    setIsWorking(false);
+    try {
+      setIsWorking(true);
+      await createFolder({ name: folderName.trim(), category: folderCategory });
+      setFolderName('');
+    } finally {
+      setIsWorking(false);
+    }
   };
 
   const uploadAction = async () => {
     if (!selectedFolderId || !selectedFile) return;
-    setIsWorking(true);
-    await uploadToFolder({ folderId: selectedFolderId, file: selectedFile });
-    setSelectedFile(null);
-    await fetchFiles();
-    setIsWorking(false);
+    try {
+      setIsWorking(true);
+      await uploadToFolder({ folderId: selectedFolderId, file: selectedFile });
+      setSelectedFile(null);
+    } finally {
+      setIsWorking(false);
+    }
   };
 
   const isPdfFile = (mimeOrType: string) => mimeOrType.toLowerCase().includes('pdf');
@@ -124,6 +138,22 @@ function LibraryContent() {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl('');
     setPreviewTitle('');
+  };
+
+  const deleteFileAction = async (file: { _id: string; name: string }) => {
+    const confirmed = window.confirm(`Delete "${file.name}" from your library?`);
+    if (!confirmed) return;
+
+    try {
+      setDeletingFileId(file._id);
+      await deleteFile(file._id);
+
+      if (previewTitle === file.name) {
+        closePreview();
+      }
+    } finally {
+      setDeletingFileId(null);
+    }
   };
 
   return (
@@ -225,6 +255,14 @@ function LibraryContent() {
                             Preview PDF
                           </button>
                         ) : null}
+                        <button
+                          className="btn-nav-prev"
+                          style={{ padding: '6px 10px', borderColor: '#ef4444', color: '#ef4444' }}
+                          onClick={() => deleteFileAction({ _id: f._id, name: f.name })}
+                          disabled={deletingFileId === f._id}
+                        >
+                          {deletingFileId === f._id ? 'Deleting...' : 'Delete'}
+                        </button>
                       </div>
                     </div>
                   ))}

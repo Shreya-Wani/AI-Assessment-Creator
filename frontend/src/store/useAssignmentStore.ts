@@ -2,6 +2,43 @@ import { create } from 'zustand';
 import { Assignment, AssignmentFormData } from '@/types';
 import { apiFetch } from '@/lib/api';
 
+type AssignmentCreatePayload = FormData | {
+  title: string;
+  subject: string;
+  grade: string;
+  topic?: string;
+  dueDate?: string;
+  examDate?: string;
+  questionTypes?: string[];
+  numberOfQuestions?: number;
+  totalMarks?: number;
+  duration?: string | number;
+  difficulty?: string;
+  additionalInstructions?: string;
+};
+
+const getPayloadField = (
+  payload: AssignmentCreatePayload,
+  key: string,
+  fallback = ''
+): string => {
+  if (payload instanceof FormData) {
+    const value = payload.get(key);
+    return typeof value === 'string' ? value : fallback;
+  }
+
+  const value = payload[key as keyof typeof payload];
+  if (typeof value === 'string' || typeof value === 'number') {
+    return String(value);
+  }
+
+  return fallback;
+};
+
+const toErrorMessage = (error: unknown, fallback: string): string => {
+  return error instanceof Error ? error.message : fallback;
+};
+
 interface AssignmentState {
   formData: AssignmentFormData;
   setFormField: <K extends keyof AssignmentFormData>(key: K, value: AssignmentFormData[K]) => void;
@@ -15,7 +52,7 @@ interface AssignmentState {
   progress: number;
   generationStatus: string;
 
-  createAssignment: (formData: any) => Promise<string>;
+  createAssignment: (formData: AssignmentCreatePayload) => Promise<string>;
   fetchAssignment: (id: string) => Promise<void>;
   fetchAssignments: () => Promise<void>;
   regenerateAssignment: (id: string) => Promise<void>;
@@ -60,12 +97,12 @@ export const useAssignmentStore = create<AssignmentState>((set) => ({
     set({ formData: { ...initialFormData } });
   },
 
-  createAssignment: async (payload: any) => {
+  createAssignment: async (payload: AssignmentCreatePayload) => {
     set({ isSubmitting: true, error: null });
     try {
       // Support both JSON payloads and FormData
       const options: RequestInit = { method: 'POST', body: payload instanceof FormData ? payload : JSON.stringify(payload) };
-      const response = await apiFetch('/assignments', options as RequestInit);
+      const response = await apiFetch('/assignments', options);
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -75,25 +112,47 @@ export const useAssignmentStore = create<AssignmentState>((set) => ({
       const data = await response.json();
 
       // Store the jobId immediately so the assessment page can use it
+      const assignmentId: string = data.assignmentId || data.assignment?._id;
+      const assignmentJobId: string | undefined = data.jobId || data.assignment?.jobId;
+      const nextAssignment: Assignment = {
+        _id: assignmentId,
+        jobId: assignmentJobId,
+        status: 'pending',
+        progress: 0,
+        title: getPayloadField(payload, 'title'),
+        subject: getPayloadField(payload, 'subject'),
+        grade: getPayloadField(payload, 'grade'),
+        topic: getPayloadField(payload, 'topic'),
+        dueDate: getPayloadField(payload, 'dueDate', new Date().toISOString().slice(0, 10)),
+        examDate: getPayloadField(payload, 'examDate') || undefined,
+        questionTypes: payload instanceof FormData
+          ? (() => {
+            try {
+              return JSON.parse(getPayloadField(payload, 'questionTypes', '[]')) as string[];
+            } catch {
+              return [];
+            }
+          })()
+          : (payload.questionTypes || []),
+        numberOfQuestions: Number(getPayloadField(payload, 'numberOfQuestions', '0')),
+        totalMarks: Number(getPayloadField(payload, 'totalMarks', '0')),
+        duration: getPayloadField(payload, 'duration') || undefined,
+        difficulty: getPayloadField(payload, 'difficulty', 'mixed'),
+        additionalInstructions: getPayloadField(payload, 'additionalInstructions'),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
       set({
         isSubmitting: false,
         progress: 0,
         generationStatus: 'pending',
-        currentAssignment: {
-          _id: data.assignmentId || data.assignment?._id,
-          jobId: data.jobId || data.assignment?.jobId,
-          status: 'pending',
-          title: payload instanceof FormData ? payload.get('title') as string : payload.title,
-          subject: payload instanceof FormData ? payload.get('subject') as string : payload.subject,
-          grade: payload instanceof FormData ? payload.get('grade') as string : payload.grade,
-          totalMarks: payload instanceof FormData ? Number(payload.get('totalMarks')) : payload.totalMarks,
-          duration: payload instanceof FormData ? payload.get('duration') : payload.duration,
-        } as any,
+        currentAssignment: nextAssignment,
       });
 
-      return data.assignmentId || data.assignment?._id;
-    } catch (error: any) {
-      set({ isSubmitting: false, error: error.message });
+      return assignmentId;
+    } catch (error: unknown) {
+      set({ isSubmitting: false, error: toErrorMessage(error, 'Failed to create assignment') });
       throw error;
     }
   },
@@ -121,8 +180,8 @@ export const useAssignmentStore = create<AssignmentState>((set) => ({
         progress: assignment.progress || 0,
         generationStatus: assignment.status,
       });
-    } catch (error: any) {
-      set({ isLoading: false, error: error.message });
+    } catch (error: unknown) {
+      set({ isLoading: false, error: toErrorMessage(error, 'Failed to fetch assignment') });
     }
   },
 
@@ -135,8 +194,8 @@ export const useAssignmentStore = create<AssignmentState>((set) => ({
       }
       const data = await response.json();
       set({ assignments: data.assignments || [], isLoading: false });
-    } catch (error: any) {
-      set({ isLoading: false, error: error.message, assignments: [] });
+    } catch (error: unknown) {
+      set({ isLoading: false, error: toErrorMessage(error, 'Failed to fetch assignments'), assignments: [] });
     }
   },
 
@@ -151,8 +210,8 @@ export const useAssignmentStore = create<AssignmentState>((set) => ({
         throw new Error(data.error || 'Failed to regenerate');
       }
       set({ isSubmitting: false });
-    } catch (error: any) {
-      set({ isSubmitting: false, error: error.message });
+    } catch (error: unknown) {
+      set({ isSubmitting: false, error: toErrorMessage(error, 'Failed to regenerate') });
     }
   },
 

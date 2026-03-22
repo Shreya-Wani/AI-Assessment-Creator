@@ -33,8 +33,9 @@ export const useDashboardStore = create<DashboardState>((set) => ({
       if (!res.ok) throw new Error('Failed to fetch dashboard');
       const data = await res.json();
       set({ stats: data, isLoading: false });
-    } catch (err: any) {
-      set({ stats: null, isLoading: false, error: err.message });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to fetch dashboard';
+      set({ stats: null, isLoading: false, error: message });
     }
   },
 }));

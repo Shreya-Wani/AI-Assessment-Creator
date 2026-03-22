@@ -40,6 +40,19 @@ const toErrorMessage = (error: unknown, fallback: string): string => {
   return fallback;
 };
 
+const parseApiError = async (res: Response, fallback: string): Promise<string> => {
+  try {
+    const data = await res.json();
+    if (data?.error && typeof data.error === 'string') {
+      return data.error;
+    }
+  } catch {
+    // Intentionally ignore JSON parse errors and use fallback message.
+  }
+
+  return fallback;
+};
+
 export const useLibraryStore = create<LibraryState>((set, get) => ({
   files: [],
   folders: [],
@@ -50,7 +63,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const res = await apiFetch('/library');
-      if (!res.ok) throw new Error('Failed to fetch library');
+      if (!res.ok) throw new Error(await parseApiError(res, 'Failed to fetch library'));
       const data = await res.json();
       set({ files: data, isLoading: false });
     } catch (error: unknown) {
@@ -61,7 +74,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   fetchFolders: async () => {
     try {
       const res = await apiFetch('/library/folders');
-      if (!res.ok) throw new Error('Failed to fetch folders');
+      if (!res.ok) throw new Error(await parseApiError(res, 'Failed to fetch folders'));
       const data = await res.json();
       set({ folders: data });
     } catch (error: unknown) {
@@ -75,7 +88,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
         method: 'POST',
         body: JSON.stringify(data),
       });
-      if (!res.ok) throw new Error('Failed to create folder');
+      if (!res.ok) throw new Error(await parseApiError(res, 'Failed to create folder'));
       await get().fetchFolders();
     } catch (error: unknown) {
       set({ error: toErrorMessage(error, 'Failed to create folder') });
@@ -93,7 +106,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
         body: form,
       });
 
-      if (!res.ok) throw new Error('Failed to upload file');
+      if (!res.ok) throw new Error(await parseApiError(res, 'Failed to upload file'));
       await Promise.all([get().fetchFiles(), get().fetchFolders()]);
     } catch (error: unknown) {
       set({ error: toErrorMessage(error, 'Failed to upload file') });
@@ -106,7 +119,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
         method: 'POST',
         body: JSON.stringify(data),
       });
-      if (!res.ok) throw new Error('Failed to add file');
+      if (!res.ok) throw new Error(await parseApiError(res, 'Failed to add file'));
       await get().fetchFiles();
     } catch (error: unknown) {
       set({ error: toErrorMessage(error, 'Failed to add file') });
@@ -119,7 +132,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
         method: 'PUT',
         body: JSON.stringify(data),
       });
-      if (!res.ok) throw new Error('Failed to update file');
+      if (!res.ok) throw new Error(await parseApiError(res, 'Failed to update file'));
       await get().fetchFiles();
     } catch (error: unknown) {
       set({ error: toErrorMessage(error, 'Failed to update file') });
@@ -129,7 +142,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   deleteFile: async (id) => {
     try {
       const res = await apiFetch(`/library/${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Failed to delete file');
+      if (!res.ok) throw new Error(await parseApiError(res, 'Failed to delete file'));
       await get().fetchFiles();
     } catch (error: unknown) {
       set({ error: toErrorMessage(error, 'Failed to delete file') });

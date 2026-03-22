@@ -60,7 +60,7 @@ function ToolkitContent() {
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28 }}>
         <h1 style={{ fontSize: 28, fontWeight: 800, marginBottom: 8 }}>AI Teacher Toolkit</h1>
         <p style={{ color: 'var(--text-secondary)', marginBottom: 20 }}>
-          One focused helper: evaluate a student's answer instantly and get actionable teaching feedback.
+          One focused helper: evaluate a student&apos;s answer instantly and get actionable teaching feedback.
         </p>
 
         <div className="profile-card" style={{ padding: 22, marginBottom: 16 }}>
@@ -78,7 +78,7 @@ function ToolkitContent() {
           <textarea className="form-textarea" style={{ minHeight: 110, marginBottom: 10 }} value={answerKey} onChange={(e) => setAnswerKey(e.target.value)} placeholder="Write the ideal expected answer" />
 
           <label className="form-label">Student Answer</label>
-          <textarea className="form-textarea" style={{ minHeight: 110 }} value={studentAnswer} onChange={(e) => setStudentAnswer(e.target.value)} placeholder="Paste the student's response" />
+          <textarea className="form-textarea" style={{ minHeight: 110 }} value={studentAnswer} onChange={(e) => setStudentAnswer(e.target.value)} placeholder="Paste the student&apos;s response" />
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
             <button className="btn-nav-next" onClick={runHelper} disabled={loading}>

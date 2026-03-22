@@ -8,6 +8,11 @@ import Sidebar from '@/components/Sidebar';
 import TopBar from '@/components/TopBar';
 import AuthGuard from '@/components/AuthGuard';
 
+type FormDataExtra = {
+  examDate?: string;
+  duration?: string | number;
+};
+
 function Field({
   label,
   error,
@@ -40,6 +45,7 @@ function HomeContent() {
   ]);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const extendedFormData = formData as typeof formData & FormDataExtra;
 
   const handleUpdate = (index: number, field: string, val: number) => {
     const newTypes = [...qTypes];
@@ -66,8 +72,8 @@ function HomeContent() {
     if (!formData.title?.trim())    e.title    = 'Title is required';
     if (!formData.subject?.trim())  e.subject  = 'Subject is required';
     if (!formData.grade?.trim())    e.grade    = 'Grade is required';
-    if (!(formData as any).examDate) e.examDate = 'Exam date & time is required';
-    if (!(formData as any).duration || Number((formData as any).duration) <= 0)
+    if (!extendedFormData.examDate) e.examDate = 'Exam date & time is required';
+    if (!extendedFormData.duration || Number(extendedFormData.duration) <= 0)
       e.duration = 'Duration is required';
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -91,9 +97,9 @@ function HomeContent() {
         subject:     formData.subject,
         grade:       formData.grade,
         topic:       formData.topic || '',
-        dueDate:     (formData as any).examDate ? String((formData as any).examDate).slice(0, 10) : new Date().toISOString().slice(0, 10),
-        examDate:    (formData as any).examDate || '',
-        duration:    (formData as any).duration || '',
+        dueDate:     extendedFormData.examDate ? String(extendedFormData.examDate).slice(0, 10) : new Date().toISOString().slice(0, 10),
+        examDate:    extendedFormData.examDate || '',
+        duration:    extendedFormData.duration || '',
         totalMarks:  totalM,
         numberOfQuestions: totalQ,
         questionsConfig,
@@ -107,8 +113,9 @@ function HomeContent() {
       } else {
         alert('Failed to create assignment. Please check console for errors.');
       }
-    } catch (err: any) {
-      alert(`Error: ${err.message || 'Failed to create assignment'}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to create assignment';
+      alert(`Error: ${message}`);
     }
   };
 
@@ -177,7 +184,7 @@ function HomeContent() {
                 ☁️
               </motion.div>
               <div className="upload-text">
-                {formData.file ? (formData.file as any).name : 'Choose a file or drag & drop it here'}
+                {formData.file ? formData.file.name : 'Choose a file or drag & drop it here'}
               </div>
               <div className="upload-hint">JPEG, PNG, PDF, upto 10MB</div>
               <button className="btn-browse" type="button">Browse Files</button>
@@ -250,8 +257,8 @@ function HomeContent() {
                 <input
                   type="datetime-local"
                   className="form-input"
-                  value={(formData as any).examDate || ''}
-                  onChange={(e) => setFormField('examDate' as any, e.target.value)}
+                  value={extendedFormData.examDate || ''}
+                  onChange={(e) => setFormField('examDate', e.target.value)}
                 />
               </Field>
 
@@ -261,8 +268,8 @@ function HomeContent() {
                   className="form-input"
                   min={1}
                   placeholder="e.g., 60"
-                  value={(formData as any).duration || ''}
-                  onChange={(e) => setFormField('duration' as any, e.target.value)}
+                  value={extendedFormData.duration || ''}
+                  onChange={(e) => setFormField('duration', e.target.value)}
                 />
               </Field>
             </motion.div>

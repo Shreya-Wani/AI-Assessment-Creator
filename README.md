@@ -126,8 +126,12 @@ npm run dev
 cd frontend
 npm install
 
-# Create .env.local
-echo "NEXT_PUBLIC_API_URL=http://localhost:5000" > .env.local
+# Create .env.local from template
+cp .env.example .env.local
+
+# Edit .env.local for your environment
+# NEXT_PUBLIC_API_URL should include /api suffix
+# NEXT_PUBLIC_SOCKET_URL should be backend origin (no /api)
 
 # Start the development server
 npm run dev
@@ -168,8 +172,17 @@ FRONTEND_URL=http://localhost:3000
 
 ### Frontend (`.env.local`)
 ```env
-NEXT_PUBLIC_API_URL=http://localhost:5000
+NEXT_PUBLIC_API_URL=http://localhost:5000/api
+NEXT_PUBLIC_SOCKET_URL=http://localhost:5000
 ```
+
+---
+
+## 🚢 Deployment
+
+For production deployment steps (envs, build checks, hosting patterns, smoke tests), see:
+
+- [DEPLOYMENT.md](DEPLOYMENT.md)
 
 ---
 

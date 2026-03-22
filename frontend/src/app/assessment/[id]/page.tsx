@@ -11,6 +11,28 @@ import TopBar from '@/components/TopBar';
 import AuthGuard from '@/components/AuthGuard';
 import { useAuthStore } from '@/store/useAuthStore';
 
+type GeneratedQuestion = {
+  question?: string;
+  text?: string;
+  marks?: number;
+  options?: string[];
+};
+
+type GeneratedSection = {
+  name?: string;
+  title?: string;
+  instructions?: string;
+  questions?: GeneratedQuestion[];
+};
+
+type GeneratedPaper = {
+  subject?: string;
+  grade?: string;
+  totalMarks?: number;
+  duration?: string | number;
+  sections?: GeneratedSection[];
+};
+
 // Helpers
 function getStatusText(progress: number) {
   if (progress === 0) return 'Initializing...';
@@ -76,17 +98,13 @@ function AssessmentContent() {
   const paperRef = useRef<HTMLDivElement>(null);
   const requestedIdRef = useRef<string | null>(null);
 
-  const { currentAssignment, fetchAssignment, generationStatus, progress, updateProgress } = useAssignmentStore();
+  const { currentAssignment, fetchAssignment, generationStatus, updateProgress } = useAssignmentStore();
   const { user } = useAuthStore();
 
   const [jobId, setJobId] = useState<string | null>(null);
   const [localProgress, setLocalProgress] = useState(0);
   const [error, setError] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
-  const [errorType, setErrorType] = useState<'quota' | 'temporary' | 'validation' | 'unknown'>('unknown');
-  const [isRetryable, setIsRetryable] = useState(true);
-  const [retryInfo, setRetryInfo] = useState<{ attempt?: number; maxAttempts?: number; willRetry?: boolean }>({});
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<GeneratedPaper | null>(null);
   const [fakeTickingItems, setFakeTickingItems] = useState<string[]>([]);
   const [processFeed, setProcessFeed] = useState<Array<{ id: string; text: string }>>([]);
 
@@ -128,10 +146,13 @@ function AssessmentContent() {
         setResult(currentAssignment.generatedPaper);
         setLocalProgress(100);
         pushProcess('Question paper generated successfully.');
-      } else if (currentAssignment.status === 'completed' && (currentAssignment as any).result) {
-        setResult((currentAssignment as any).result);
-        setLocalProgress(100);
-        pushProcess('Paper result received from API.');
+      } else if (currentAssignment.status === 'completed') {
+        const assignmentWithResult = currentAssignment as typeof currentAssignment & { result?: GeneratedPaper };
+        if (assignmentWithResult.result) {
+          setResult(assignmentWithResult.result);
+          setLocalProgress(100);
+          pushProcess('Paper result received from API.');
+        }
       } else if (currentAssignment.status === 'failed') {
         setError(true);
         setLocalProgress(0);
@@ -175,7 +196,7 @@ function AssessmentContent() {
     const unsubCompleted = onCompleted((data) => {
       if (data.assignmentId === id) {
         setLocalProgress(100);
-        setResult(data.result);
+        setResult(data.result as GeneratedPaper);
         setError(false);
         updateProgress(100, 'completed');
         pushProcess('Realtime completion event received.');
@@ -185,13 +206,7 @@ function AssessmentContent() {
     const unsubError = onError((data) => {
       if (data.jobId === activeJobId) {
         setError(true);
-        setErrorMsg(data.error || 'Generation failed');
         pushProcess(`Realtime error: ${data.error || 'Generation failed'}`);
-        const isQuotaError = data.error?.includes('quota') || data.error?.includes('Quota');
-        const isTemporaryError = data.error?.toLowerCase().includes('temporary') || data.error?.toLowerCase().includes('attempt');
-        if (isQuotaError) { setErrorType('quota'); setIsRetryable(false); }
-        else if (isTemporaryError) { setErrorType('temporary'); setIsRetryable(true); const m = data.error?.match(/Attempt (\d+)\/(\d+)/); if (m) setRetryInfo({ attempt: parseInt(m[1]), maxAttempts: parseInt(m[2]), willRetry: parseInt(m[1]) < parseInt(m[2]) }); }
-        else { setErrorType('unknown'); setIsRetryable(true); }
         setLocalProgress(0); updateProgress(0, 'failed');
       }
     });
@@ -222,7 +237,6 @@ function AssessmentContent() {
         }
         if (data?.status === 'failed' || data?.error) {
           setError(true);
-          setErrorMsg(data?.error || 'Generation failed');
           pushProcess(`Polling failure: ${data?.error || 'Generation failed'}`);
         }
       } catch {
@@ -232,15 +246,6 @@ function AssessmentContent() {
 
     return () => clearInterval(interval);
   }, [jobId, generationActive, id, fetchAssignment, updateProgress, pushProcess]);
-
-  const handleRegenerate = useCallback(async () => {
-    try {
-      const res = await apiFetch(`/assignments/${id}/regenerate`, { method: 'POST' });
-      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Regenerate failed'); }
-      const data = await res.json();
-      setJobId(data.jobId); setLocalProgress(0); setError(false); setErrorMsg(''); setErrorType('unknown'); setIsRetryable(true); setRetryInfo({}); setResult(null); setFakeTickingItems([]); updateProgress(0, 'pending');
-    } catch (err: any) { setErrorMsg(err.message || ''); }
-  }, [id, updateProgress]);
 
   const handleDownloadPDF = useCallback(async () => {
     try {
@@ -254,10 +259,10 @@ function AssessmentContent() {
 
   const isGenerating = !result && !error && (generationStatus === 'processing' || generationStatus === 'pending' || currentAssignment?.status === 'pending' || currentAssignment?.status === 'processing');
 
-  const sections = result?.sections || [];
+  const sections: GeneratedSection[] = result?.sections || [];
   const computedSectionMarks = sections.reduce(
-    (sectionAcc: number, section: any) =>
-      sectionAcc + (section?.questions || []).reduce((qAcc: number, q: any) => qAcc + (q?.marks || 0), 0),
+    (sectionAcc: number, section) =>
+      sectionAcc + (section?.questions || []).reduce((qAcc: number, q) => qAcc + (q?.marks || 0), 0),
     0
   );
   const resolvedMaxMarks =
@@ -268,7 +273,7 @@ function AssessmentContent() {
     return text.replace(/[\[\(]\s*\d+\s*Marks?\s*[\]\)]/gi, '').trim();
   };
 
-  const formatDuration = (d?: any) => {
+  const formatDuration = (d?: string | number) => {
     if (!d && d !== 0) return '—';
     if (typeof d === 'number') return `${d} minutes`;
     if (typeof d === 'string') {
@@ -363,19 +368,19 @@ function AssessmentContent() {
                         <div className="student-line">Class: {result?.grade || currentAssignment?.grade || '____'} Section: ________</div>
                       </div>
 
-                      {sections.map((section: any, sIdx: number) => (
+                      {sections.map((section, sIdx: number) => (
                         <div key={sIdx} className="paper-section">
                           <div className="section-header">
                             <div>
                               <h2 className="section-name">{section.title}</h2>
                               <div className="section-subtitle">{section.name}</div>
                             </div>
-                            <div style={{ fontSize: 13, color: '#6b7280', fontWeight: 600 }}>{section.questions.reduce((acc: number, q: any) => acc + (q.marks || 0), 0)} Marks</div>
+                            <div style={{ fontSize: 13, color: '#6b7280', fontWeight: 600 }}>{(section.questions || []).reduce((acc: number, q) => acc + (q.marks || 0), 0)} Marks</div>
                           </div>
 
                           {section.instructions && (<div className="section-instructions">{section.instructions}</div>)}
 
-                          {section.questions?.map((q: any, qIdx: number) => (
+                          {section.questions?.map((q, qIdx: number) => (
                             <div key={qIdx} className="question-item">
                               <div className="question-header">
                                 <div style={{ display: 'flex', alignItems: 'flex-start', flex: 1 }}>

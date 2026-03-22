@@ -18,6 +18,10 @@ export default function AssignmentForm() {
     isSubmitting,
     error,
   } = useAssignmentStore();
+  const extendedFormData = formData as typeof formData & {
+    examDate?: string;
+    duration?: string | number;
+  };
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -26,14 +30,14 @@ export default function AssignmentForm() {
     if (!formData.subject.trim()) newErrors.subject = 'Subject is required';
     if (!formData.grade.trim()) newErrors.grade = 'Grade/Level is required';
     if (!formData.dueDate) newErrors.dueDate = 'Due date is required';
-    if (!(formData as any).examDate) newErrors.examDate = 'Exam date & time is required';
+    if (!extendedFormData.examDate) newErrors.examDate = 'Exam date & time is required';
     if (formData.questionTypes.length === 0) newErrors.questionTypes = 'Select at least one question type';
     if (formData.numberOfQuestions < 1 || formData.numberOfQuestions > 100)
       newErrors.numberOfQuestions = 'Must be between 1 and 100';
     if (formData.totalMarks < 1) newErrors.totalMarks = 'Must be a positive number';
     if (formData.totalMarks < formData.numberOfQuestions)
       newErrors.totalMarks = 'Total marks must be ≥ number of questions';
-    if (!(formData as any).duration || Number((formData as any).duration) <= 0)
+    if (!extendedFormData.duration || Number(extendedFormData.duration) <= 0)
       newErrors.duration = 'Enter duration in minutes';
 
     setErrors(newErrors);
@@ -66,8 +70,8 @@ export default function AssignmentForm() {
       fd.append('title', formData.title);
       fd.append('subject', formData.subject);
       fd.append('grade', formData.grade);
-      fd.append('duration', String((formData as any).duration || ''));
-      if ((formData as any).examDate) fd.append('examDate', (formData as any).examDate);
+      fd.append('duration', String(extendedFormData.duration || ''));
+      if (extendedFormData.examDate) fd.append('examDate', extendedFormData.examDate);
       fd.append('topic', formData.topic);
       fd.append('dueDate', formData.dueDate);
       fd.append('questionTypes', JSON.stringify(formData.questionTypes));
@@ -83,7 +87,7 @@ export default function AssignmentForm() {
       const assignmentId = await createAssignment(fd);
       resetForm();
       router.push(`/assessment/${assignmentId}`);
-    } catch (err) {
+    } catch {
       // Error is handled by the store
     }
   };
@@ -144,8 +148,8 @@ export default function AssignmentForm() {
             <input
               type="datetime-local"
               className="form-input"
-              value={(formData as any).examDate || ''}
-              onChange={(e) => setFormField('examDate' as any, e.target.value)}
+              value={extendedFormData.examDate || ''}
+              onChange={(e) => setFormField('examDate', e.target.value)}
             />
             {errors.examDate && <div className="form-error">⚠ {errors.examDate}</div>}
           </div>
@@ -207,8 +211,8 @@ export default function AssignmentForm() {
               className="form-input"
               min={1}
               placeholder="e.g., 60"
-              value={(formData as any).duration || ''}
-              onChange={(e) => setFormField('duration' as any, e.target.value)}
+              value={extendedFormData.duration || ''}
+              onChange={(e) => setFormField('duration', e.target.value)}
             />
             {errors.duration && <div className="form-error">⚠ {errors.duration}</div>}
           </div>
