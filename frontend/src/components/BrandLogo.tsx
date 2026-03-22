@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 
 type BrandLogoProps = {
   compact?: boolean;
@@ -8,11 +9,13 @@ type BrandLogoProps = {
 
 export default function BrandLogo({ compact = false }: BrandLogoProps) {
   return (
-    <>
-      <div className={`brand-mark ${compact ? 'compact' : ''}`} aria-hidden="true">
-        <img src="/veda-logo.svg" alt="VedaAI logo" className="brand-mark-image" />
+    <div className={`brand-logo ${compact ? 'compact' : ''}`}>
+      <span className={`brand-logo-mark ${compact ? 'compact' : ''}`}>
+        <Image src="/logo.png" alt="VedaAI logo" className="brand-logo-image" fill sizes="42px" />
+      </span>
+      <div className={`brand-wordmark ${compact ? 'compact' : ''}`}>
+        VedaAI
       </div>
-      <div className={`brand-wordmark ${compact ? 'compact' : ''}`}>VedaAI</div>
-    </>
+      </div>
   );
 }
