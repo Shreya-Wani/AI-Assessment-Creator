@@ -1,5 +1,5 @@
 import { Queue } from 'bullmq';
-import { getRedisConnection } from '../../services/redisService';
+import { getRedisOptions } from '../../services/redisService';
 import { AppError } from '../../utils/AppError';
 import logger from '../../utils/logger';
 
@@ -11,9 +11,8 @@ let queue: Queue<GenerationJobData> | null = null;
 
 export const getQueue = (): Queue<GenerationJobData> => {
   if (!queue) {
-    const connection = getRedisConnection();
     queue = new Queue<GenerationJobData>('assignment-generation', {
-      connection: connection.options as any,
+      connection: getRedisOptions(),
       defaultJobOptions: {
         attempts: 3,
         backoff: { type: 'exponential', delay: 2000 },

@@ -1,5 +1,5 @@
 import { Worker, Job, UnrecoverableError } from 'bullmq';
-import { getRedisConnection, setJobState } from '../../services/redisService';
+import { getRedisConnection, getRedisOptions, setJobState } from '../../services/redisService';
 import { GenerationJobData } from './queue';
 import { generateQuestionPaper } from '../ai/ai.service';
 import { Assignment } from '../assignment/assignment.model';
@@ -10,7 +10,6 @@ import logger from '../../utils/logger';
 let worker: Worker | null = null;
 
 export const startWorker = (): Worker => {
-  const connection = getRedisConnection();
 
   worker = new Worker<GenerationJobData>(
     'assignment-generation',
@@ -109,7 +108,7 @@ export const startWorker = (): Worker => {
       }
     },
     {
-      connection: connection.options as any,
+      connection: getRedisOptions(),
       concurrency: 2,
     }
   );
@@ -123,6 +122,8 @@ export const startWorker = (): Worker => {
   });
 
   worker.on('error', (err) => {
+    // ECONNRESET is expected on Upstash free tier (idle timeout) — suppress noise
+    if (err.message.includes('ECONNRESET')) return;
     logger.error({ error: err.message }, '[WORKER] System error');
   });
 
