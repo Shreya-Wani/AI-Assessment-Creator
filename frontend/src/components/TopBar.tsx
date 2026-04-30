@@ -113,7 +113,7 @@ export default function TopBar({ title }: { title: string }) {
         <span style={{ opacity: 0.5 }}>㗊</span> <span>{title}</span>
       </div>
       
-      {/* VedaAI Logo - Mobile */}
+      {/* AssesAI Logo - Mobile */}
       <Link href="/" className="top-bar-logo-mobile">
         <BrandLogo compact />
       </Link>

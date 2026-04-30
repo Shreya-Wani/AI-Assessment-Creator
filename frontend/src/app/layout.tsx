@@ -9,7 +9,8 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <link rel="icon" href="/veda-logo.svg" />
+        <link rel="icon" href="/assesai-logo.png" />
+        <title>AssesAI</title>
       </head>
       <body>
         <ThemeProvider attribute="class" defaultTheme="light">
