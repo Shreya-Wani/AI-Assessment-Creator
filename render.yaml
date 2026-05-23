@@ -19,7 +19,7 @@ services:
         sync: false
       - key: MONGODB_URI
         sync: false
-      - key: GEMINI_API_KEY
+      - key: GROQ_API_KEY
         sync: false
       - key: REDIS_URL
         fromService:
