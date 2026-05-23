@@ -1,8 +1,8 @@
 # VedaAI — AI Assessment Creator
 
-> An intelligent, full-stack **AI-powered Assessment Creator** that allows teachers to create assignments and generate structured question papers using Google Gemini AI. Built with modern technologies, JWT-based authentication, role-based access control, and real-time updates via WebSocket.
+> An intelligent, full-stack **AI-powered Assessment Creator** that allows teachers to create assignments and generate structured question papers using **Groq AI (Llama 3.3 70B)**. Built with modern technologies, JWT-based authentication, role-based access control, and real-time updates via WebSocket.
 
-![Tech Stack](https://img.shields.io/badge/Next.js-TypeScript-blue) ![Backend](https://img.shields.io/badge/Express-Node.js-green) ![AI](https://img.shields.io/badge/Google-Gemini_2.0_Flash-orange) ![DB](https://img.shields.io/badge/MongoDB-Redis-red) ![Auth](https://img.shields.io/badge/Auth-JWT-yellow)
+![Tech Stack](https://img.shields.io/badge/Next.js-TypeScript-blue) ![Backend](https://img.shields.io/badge/Express-Node.js-green) ![AI](https://img.shields.io/badge/Groq-Llama_3.3_70B-orange) ![DB](https://img.shields.io/badge/MongoDB-Redis-red) ![Auth](https://img.shields.io/badge/Auth-JWT-yellow)
 
 ---
 
@@ -22,8 +22,8 @@
                               ┌─────────────────────┼──────────────────┐
                               │                     │                  │
                         ┌─────▼──────┐    ┌─────────▼────┐   ┌────────▼───┐
-                        │  MongoDB   │    │    Redis     │   │ Gemini AI  │
-                        │  Storage  │    │  Cache/Queue │   │   2.0 Flash│
+                        │  MongoDB   │    │    Redis     │   │  Groq AI   │
+                        │  Storage  │    │  Cache/Queue │   │ Llama 3.3  │
                         └────────────┘    └──────────────┘   └────────────┘
 ```
 
@@ -32,7 +32,7 @@
 2. Teacher fills the assignment creation form on the frontend
 3. Frontend sends an authenticated REST API request to the Express backend
 4. Backend creates a MongoDB record and queues a **BullMQ** job
-5. BullMQ worker picks up the job and calls **Google Gemini AI**
+5. BullMQ worker picks up the job and calls **Groq AI (Llama 3.3 70B)**
 6. AI generates structured questions (sections, difficulty levels, marks)
 7. Result is stored in MongoDB and cached in **Redis**
 8. **Socket.IO** notifies the frontend in real-time with progress updates
@@ -51,7 +51,7 @@
 ### Teacher Features
 - **Assignment Creation Form** — Set due date, question types, marks per type
 - **File Upload** — Upload images/PDFs as reference material for question generation
-- **AI Question Generation** — Prompt-engineered with Gemini 2.0 Flash
+- **AI Question Generation** — Prompt-engineered with Groq Llama 3.3 70B Versatile
 - **Regenerate** — Re-generate questions for any assignment with one click
 - **Delete Assignments** — Remove assignments permanently
 - **Group Management** — Create and manage student groups
@@ -89,7 +89,7 @@
 | **Redis** (ioredis) | Caching & BullMQ queue backend |
 | **BullMQ** | Background job processing for AI generation |
 | **Socket.IO** | Real-time server-to-client communication |
-| **Google Gemini AI** (2.0 Flash) | AI question generation |
+| **Groq AI** (Llama 3.3 70B Versatile) | AI question generation |
 | **JWT + bcryptjs** | Authentication & password hashing |
 
 ---
@@ -100,7 +100,7 @@
 - **Node.js** v18+
 - **MongoDB** running locally or a cloud URI (e.g. MongoDB Atlas)
 - **Redis** running locally or a cloud instance
-- **Google Gemini API Key** — [Get one here](https://aistudio.google.com/apikey)
+- **Groq API Key** — [Get one free here](https://console.groq.com/keys)
 
 ### 1. Clone the Repository
 ```bash
@@ -160,8 +160,8 @@ MONGODB_URI=mongodb://localhost:27017/vedaai
 REDIS_HOST=localhost
 REDIS_PORT=6379
 
-# Google Gemini AI
-GEMINI_API_KEY=your_gemini_api_key_here
+# Groq AI
+GROQ_API_KEY=your_groq_api_key_here
 
 # JWT
 JWT_SECRET=your_jwt_secret_here

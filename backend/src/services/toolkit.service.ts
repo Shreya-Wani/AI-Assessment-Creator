@@ -1,9 +1,13 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import OpenAI from 'openai';
 import { config } from '../config';
 import { AppError } from '../utils/AppError';
 
-const genAI = new GoogleGenerativeAI(config.geminiApiKey);
-const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+const groq = new OpenAI({
+  apiKey: config.groqApiKey,
+  baseURL: 'https://api.groq.com/openai/v1',
+});
+
+const GROQ_MODEL = 'llama-3.3-70b-versatile';
 
 export interface ExplainAnswerInput {
   question: string;
@@ -60,12 +64,14 @@ Rules:
 - Be constructive, not harsh.
 - No markdown.`;
 
-  const result = await model.generateContent({
-    contents: [{ role: 'user', parts: [{ text: prompt }] }],
-    generationConfig: { temperature: 0.4, topP: 0.9, topK: 30 },
+  const completion = await groq.chat.completions.create({
+    model: GROQ_MODEL,
+    messages: [{ role: 'user', content: prompt }],
+    temperature: 0.4,
+    top_p: 0.9,
   });
 
-  const text = result.response.text();
+  const text = completion.choices[0]?.message?.content || '';
 
   try {
     const parsed = JSON.parse(text);

@@ -9,8 +9,6 @@
     "start": "node dist/server.js"
   },
   "dependencies": {
-    "@google-cloud/vertexai": "^1.10.0",
-    "@google/generative-ai": "^0.21.0",
     "bcrypt": "^6.0.0",
     "bullmq": "^5.34.0",
     "cors": "^2.8.5",

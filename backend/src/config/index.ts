@@ -15,13 +15,13 @@ export const config = {
     host: process.env.REDIS_HOST || 'localhost',
     port: parseInt(process.env.REDIS_PORT || '6379', 10),
   },
-  geminiApiKey: requireEnv('GEMINI_API_KEY'),
+  groqApiKey: requireEnv('GROQ_API_KEY'),
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
 };
 
-// Verify API key format
-if (config.geminiApiKey && !config.geminiApiKey.startsWith('AIza')) {
-  console.warn('⚠️  WARNING: GEMINI_API_KEY does not start with "AIza" - this may be invalid');
-  console.warn('⚠️  Get a valid key from: https://aistudio.google.com/app/apikey');
+// Verify Groq API key is present
+if (!config.groqApiKey) {
+  console.warn('⚠️  WARNING: GROQ_API_KEY is not set');
+  console.warn('⚠️  Get a valid key from: https://console.groq.com/keys');
 }
 

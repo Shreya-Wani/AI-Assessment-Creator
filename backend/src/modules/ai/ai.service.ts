@@ -1,17 +1,21 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import OpenAI from 'openai';
 import { config } from '../../config';
 import { IAssignment, IQuestionPaper } from '../assignment/assignment.model';
 import { buildPrompt } from './prompt.builder';
 import { parseResponse } from './response.parser';
 import logger from '../../utils/logger';
 
-const genAI = new GoogleGenerativeAI(config.geminiApiKey);
-const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+const groq = new OpenAI({
+  apiKey: config.groqApiKey,
+  baseURL: 'https://api.groq.com/openai/v1',
+});
 
-logger.info('[AI] Initialized Gemini API with model: gemini-2.5-flash');
+const GROQ_MODEL = 'llama-3.3-70b-versatile';
 
-// Helper to classify Gemini API errors
-const classifyGeminiError = (error: any): { type: 'quota' | 'temporary' | 'validation' | 'unknown'; isRetryable: boolean } => {
+logger.info(`[AI] Initialized Groq API with model: ${GROQ_MODEL}`);
+
+// Helper to classify API errors
+const classifyApiError = (error: any): { type: 'quota' | 'temporary' | 'validation' | 'unknown'; isRetryable: boolean } => {
   const message = error.message?.toLowerCase() || '';
   const status = error?.status;
 
@@ -59,32 +63,25 @@ export const generateQuestionPaper = async (
     const prompt = buildPrompt(assignment);
 
     onProgress?.(30);
-    
-    const result = await withTimeout(
-      model.generateContent({
-        contents: [
+
+    const completion = await withTimeout(
+      groq.chat.completions.create({
+        model: GROQ_MODEL,
+        messages: [
           {
             role: 'user',
-            parts: [
-              {
-                text: prompt
-              }
-            ]
-          }
+            content: prompt,
+          },
         ],
-        generationConfig: {
-          temperature: 0.7,
-          topK: 40,
-          topP: 0.95,
-        }
+        temperature: 0.7,
+        top_p: 0.95,
       }),
       60000 // 60 second timeout
     );
 
     onProgress?.(70);
-    
-    const response = result.response;
-    const text = response.text();
+
+    const text = completion.choices[0]?.message?.content || '';
 
     onProgress?.(80);
     const paper = parseResponse(text);
@@ -93,13 +90,13 @@ export const generateQuestionPaper = async (
     return paper;
   } catch (error: any) {
     logger.error({ error: error.message, status: error?.status, code: error.code }, '[AI] Generation failed');
-    
+
     // Classify the error to determine if it's retryable
-    const errorClassification = classifyGeminiError(error);
-    
+    const errorClassification = classifyApiError(error);
+
     let userMessage = '';
     if (errorClassification.type === 'quota') {
-      userMessage = 'Gemini API quota exceeded. Please check your Google AI Studio quota limits or upgrade your plan.';
+      userMessage = 'Groq API quota exceeded. Please check your Groq Console quota limits or upgrade your plan.';
     } else if (errorClassification.type === 'validation') {
       userMessage = 'Invalid request configuration. Please check your assignment settings and try again.';
     } else if (errorClassification.type === 'temporary') {
