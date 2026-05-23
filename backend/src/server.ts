@@ -10,7 +10,7 @@ import rateLimit from 'express-rate-limit';
 import { config } from './config';
 import { initWebSocket } from './websocket';
 import { startWorker } from './modules/queue/worker';
-import { getRedisConnection } from './services/redisService';
+import { getRedisConnection, REDIS_AVAILABLE } from './services/redisService';
 import assignmentRoutes from './modules/assignment/assignment.routes';
 import authRoutes from './routes/authRoutes';
 import groupRoutes from './routes/groupRoutes';
@@ -107,9 +107,21 @@ async function start() {
     await mongoose.connect(config.mongodbUri);
     logger.info('MongoDB connected');
 
-    getRedisConnection();
+    // Try to connect Redis — non-fatal if it fails
+    if (config.redis.url || config.redis.host !== 'localhost') {
+      getRedisConnection();
+      // Give Redis 3s to connect before starting the worker
+      await new Promise(resolve => setTimeout(resolve, 3000));
+    }
+
+    if (REDIS_AVAILABLE) {
+      logger.info('[REDIS] Available — starting BullMQ worker');
+      startWorker();
+    } else {
+      logger.warn('[REDIS] Unavailable — running in inline processing mode (no queue)');
+    }
+
     initWebSocket(httpServer);
-    startWorker();
 
     httpServer.listen(config.port, () => {
       logger.info(`Server running on http://localhost:${config.port}`);

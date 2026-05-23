@@ -1,6 +1,7 @@
 import { Assignment } from './assignment.model';
 import { getQueue } from '../queue/queue';
-import { getRedisClient } from '../../services/redisService';
+import { getRedisClient, REDIS_AVAILABLE } from '../../services/redisService';
+import { processAssignmentInline } from '../queue/worker';
 import { CreateAssignmentInput } from './assignment.schema';
 import { AppError } from '../../utils/AppError';
 import logger from '../../utils/logger';
@@ -18,7 +19,6 @@ export const createAssignmentService = async (data: CreateAssignmentInput, userI
     }
 
     if (Array.isArray(qTypes) && qTypes.length > 0 && numQ > 0) {
-      // Distribute questions roughly evenly across selected types
       const base = Math.floor(numQ / qTypes.length);
       const remainder = numQ % qTypes.length;
       const marksPerQuestion = numQ ? Math.max(1, Math.floor(totalMarks / numQ)) : 1;
@@ -28,7 +28,6 @@ export const createAssignmentService = async (data: CreateAssignmentInput, userI
         marks: marksPerQuestion,
       }));
     } else {
-      // Fallback: single short_answer bucket
       questionsConfig = [{ type: 'short_answer', count: numQ || 1, marks: Math.max(1, Math.floor((totalMarks || numQ) / (numQ || 1))) }];
     }
   }
@@ -41,40 +40,56 @@ export const createAssignmentService = async (data: CreateAssignmentInput, userI
   });
   await assignment.save();
 
+  const assignmentId = assignment._id.toString();
   const queue = getQueue();
-  const job = await queue.add(
-    'assignment-generation',
-    { assignmentId: assignment._id.toString() },
-    { jobId: `gen-${assignment._id}`, priority: 1 }
-  );
 
-  assignment.jobId = job.id;
-  await assignment.save();
-
-  logger.info({ assignmentId: assignment._id, jobId: job.id }, '[ASSIGNMENT CREATED]');
-  return { jobId: job.id, assignmentId: assignment._id.toString() };
+  if (queue) {
+    // Queue-based processing (Redis available)
+    const job = await queue.add(
+      'assignment-generation',
+      { assignmentId },
+      { jobId: `gen-${assignmentId}`, priority: 1 }
+    );
+    assignment.jobId = job.id;
+    await assignment.save();
+    logger.info({ assignmentId, jobId: job.id }, '[ASSIGNMENT CREATED] Queued');
+    return { jobId: job.id, assignmentId };
+  } else {
+    // Inline processing fallback (no Redis)
+    const fakeJobId = `inline-${assignmentId}`;
+    assignment.jobId = fakeJobId;
+    await assignment.save();
+    logger.info({ assignmentId, jobId: fakeJobId }, '[ASSIGNMENT CREATED] Processing inline (no queue)');
+    // Run in background — don't await so the response is immediate
+    processAssignmentInline(assignmentId).catch(err =>
+      logger.error({ assignmentId, error: err.message }, '[INLINE] Background processing failed')
+    );
+    return { jobId: fakeJobId, assignmentId };
+  }
 };
 
 export const getAssignmentsService = async (userId: string) => {
-  // Include `result` so frontend can render already-generated papers without extra fetches.
-  // We still exclude heavy `fileUrl` if present.
   return Assignment.find({ createdBy: userId }).select('-fileUrl').sort({ createdAt: -1 });
 };
 
 export const getAssignmentByIdService = async (id: string) => {
   // Cache-first: check Redis before querying MongoDB
-  try {
-    const redis = getRedisClient();
-    const cached = await redis.get(`assignment:${id}`);
-    if (cached) {
-      const assignment = await Assignment.findById(id).select('-fileUrl');
-      if (assignment) {
-        const obj = assignment.toObject();
-        logger.info({ assignmentId: id, hasJobId: !!obj.jobId }, '[SERVICE] Returning cached assignment');
-        return { ...obj, result: JSON.parse(cached) };
+  if (REDIS_AVAILABLE) {
+    try {
+      const redis = getRedisClient();
+      if (redis) {
+        const cached = await redis.get(`assignment:${id}`);
+        if (cached) {
+          const assignment = await Assignment.findById(id).select('-fileUrl');
+          if (assignment) {
+            const obj = assignment.toObject();
+            logger.info({ assignmentId: id, hasJobId: !!obj.jobId }, '[SERVICE] Returning cached assignment');
+            return { ...obj, result: JSON.parse(cached) };
+          }
+        }
       }
-    }
-  } catch { /* cache miss — fallback to DB */ }
+    } catch { /* cache miss — fallback to DB */ }
+  }
 
   const assignment = await Assignment.findById(id).select('-fileUrl');
   if (!assignment) throw new AppError('Assignment not found', 404);
@@ -95,13 +110,10 @@ export const deleteAssignmentService = async (id: string, userId: string) => {
   return assignment;
 };
 
-// ── Idempotency Guard ─────────────────────────────────────────────────
-// Prevents duplicate jobs if user clicks "Generate" multiple times
 export const regenerateAssignmentService = async (id: string, userId: string) => {
   const assignment = await Assignment.findOne({ _id: id, createdBy: userId });
   if (!assignment) throw new AppError('Not found or unauthorized', 404);
 
-  // IDEMPOTENCY: reject if already processing
   if (assignment.status === 'processing') {
     throw new AppError('Assignment is already being processed. Please wait.', 409);
   }
@@ -110,15 +122,26 @@ export const regenerateAssignmentService = async (id: string, userId: string) =>
   assignment.result = undefined;
 
   const queue = getQueue();
-  const job = await queue.add(
-    'assignment-generation',
-    { assignmentId: id },
-    { jobId: `gen-${id}-${Date.now()}`, priority: 1 }
-  );
 
-  assignment.jobId = job.id;
-  await assignment.save();
-
-  logger.info({ assignmentId: id, jobId: job.id }, '[ASSIGNMENT REGENERATED]');
-  return { jobId: job.id, assignmentId: assignment._id.toString() };
+  if (queue) {
+    const job = await queue.add(
+      'assignment-generation',
+      { assignmentId: id },
+      { jobId: `gen-${id}-${Date.now()}`, priority: 1 }
+    );
+    assignment.jobId = job.id;
+    await assignment.save();
+    logger.info({ assignmentId: id, jobId: job.id }, '[ASSIGNMENT REGENERATED] Queued');
+    return { jobId: job.id, assignmentId: assignment._id.toString() };
+  } else {
+    // Inline fallback
+    const fakeJobId = `inline-${id}-${Date.now()}`;
+    assignment.jobId = fakeJobId;
+    await assignment.save();
+    logger.info({ assignmentId: id, jobId: fakeJobId }, '[ASSIGNMENT REGENERATED] Processing inline');
+    processAssignmentInline(id).catch(err =>
+      logger.error({ assignmentId: id, error: err.message }, '[INLINE] Regeneration failed')
+    );
+    return { jobId: fakeJobId, assignmentId: assignment._id.toString() };
+  }
 };
