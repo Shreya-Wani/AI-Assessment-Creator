@@ -107,11 +107,11 @@ async function start() {
     await mongoose.connect(config.mongodbUri);
     logger.info('MongoDB connected');
 
-    // Try to connect Redis — non-fatal if it fails
+    // Try to connect Redis — non-fatal, fails fast (no retries on ENOTFOUND)
     if (config.redis.url || config.redis.host !== 'localhost') {
       getRedisConnection();
-      // Give Redis 3s to connect before starting the worker
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      // Brief wait for the single connection attempt to resolve
+      await new Promise(resolve => setTimeout(resolve, 1500));
     }
 
     if (REDIS_AVAILABLE) {

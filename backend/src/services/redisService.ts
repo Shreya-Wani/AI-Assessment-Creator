@@ -8,17 +8,18 @@ import logger from '../utils/logger';
 
 export let REDIS_AVAILABLE = false;
 
+// Track whether we've already logged the failure so we don't spam logs
+let permanentlyFailed = false;
+
 function buildRedisOptions(): RedisOptions {
   const base: RedisOptions = {
     maxRetriesPerRequest: null, // REQUIRED for BullMQ
     enableReadyCheck: false,
     keepAlive: 10000,
-    connectTimeout: 15000,
-    lazyConnect: true,            // Don't auto-connect on creation
-    retryStrategy: (times: number) => {
-      if (times > 5) return null; // Stop retrying after 5 attempts
-      return Math.min(times * 1000, 10000);
-    },
+    connectTimeout: 10000,
+    lazyConnect: true,
+    // Return null = stop retrying immediately. We handle retry logic ourselves.
+    retryStrategy: () => null,
   };
 
   if (config.redis.url) {
@@ -41,7 +42,7 @@ function buildRedisOptions(): RedisOptions {
   };
 }
 
-// Export options so BullMQ Queue and Worker can create their own connections
+// Export options for BullMQ (Queue / Worker create their own connections)
 export function getRedisOptions(): RedisOptions {
   return buildRedisOptions();
 }
@@ -50,10 +51,11 @@ export function getRedisOptions(): RedisOptions {
 let connection: IORedis | null = null;
 
 export function getRedisConnection(): IORedis | null {
-  if (!config.redis.url && config.redis.host === 'localhost') {
-    // No Redis configured at all
-    return null;
-  }
+  // No Redis configured
+  if (!config.redis.url && config.redis.host === 'localhost') return null;
+
+  // Already confirmed unreachable — don't create another connection
+  if (permanentlyFailed) return null;
 
   if (!connection) {
     connection = new IORedis(buildRedisOptions());
@@ -63,20 +65,37 @@ export function getRedisConnection(): IORedis | null {
       logger.info('[REDIS] Connected and ready');
     });
 
-    connection.on('error', (err) => {
+    connection.on('error', (err: any) => {
       REDIS_AVAILABLE = false;
-      if (err.message.includes('ECONNRESET')) return;
-      // Log once per error type, don't spam
-      logger.warn({ error: err.message }, '[REDIS] Connection error (running in degraded mode)');
+
+      // ECONNRESET on idle connections is normal — suppress
+      if (err.message?.includes('ECONNRESET')) return;
+
+      // DNS failure = host doesn't exist, no point retrying — kill connection
+      if (err.code === 'ENOTFOUND' || err.message?.includes('ENOTFOUND')) {
+        if (!permanentlyFailed) {
+          permanentlyFailed = true;
+          logger.warn(
+            { host: err.hostname || err.message },
+            '[REDIS] Host unreachable (ENOTFOUND) — disabling Redis. App will run without caching/queuing.'
+          );
+          // Destroy to prevent any further reconnection attempts
+          connection?.disconnect();
+          connection = null;
+        }
+        return;
+      }
+
+      logger.warn({ error: err.message }, '[REDIS] Connection error (degraded mode)');
     });
 
     connection.on('close', () => {
       REDIS_AVAILABLE = false;
     });
 
-    // Attempt connection
-    connection.connect().catch((err) => {
-      logger.warn({ error: err.message }, '[REDIS] Initial connection failed - running without Redis');
+    // Single connection attempt — retryStrategy is null so no auto-retry
+    connection.connect().catch(() => {
+      // Error already handled by the 'error' event listener above
     });
   }
 
@@ -90,48 +109,40 @@ export const getRedisClient = getRedisConnection;
 const CACHE_TTL = 3600;
 
 export async function getCachedPaper(assignmentId: string): Promise<string | null> {
+  if (!REDIS_AVAILABLE) return null;
   const client = getRedisConnection();
-  if (!client || !REDIS_AVAILABLE) return null;
-  try {
-    return await client.get(`paper:${assignmentId}`);
-  } catch {
-    return null;
-  }
+  if (!client) return null;
+  try { return await client.get(`paper:${assignmentId}`); } catch { return null; }
 }
 
 export async function cachePaper(assignmentId: string, paper: object): Promise<void> {
+  if (!REDIS_AVAILABLE) return;
   const client = getRedisConnection();
-  if (!client || !REDIS_AVAILABLE) return;
+  if (!client) return;
   try {
     await client.set(`paper:${assignmentId}`, JSON.stringify(paper), 'EX', CACHE_TTL);
-  } catch (err: any) {
-    logger.warn({ error: err.message }, '[REDIS] Cache write skipped');
-  }
+  } catch { /* silently skip */ }
 }
 
 export async function getJobState(jobId: string): Promise<string | null> {
+  if (!REDIS_AVAILABLE) return null;
   const client = getRedisConnection();
-  if (!client || !REDIS_AVAILABLE) return null;
-  try {
-    return await client.get(`job:${jobId}:state`);
-  } catch {
-    return null;
-  }
+  if (!client) return null;
+  try { return await client.get(`job:${jobId}:state`); } catch { return null; }
 }
 
 export async function setJobState(jobId: string, state: string): Promise<void> {
+  if (!REDIS_AVAILABLE) return;
   const client = getRedisConnection();
-  if (!client || !REDIS_AVAILABLE) return;
+  if (!client) return;
   try {
     await client.set(`job:${jobId}:state`, state, 'EX', 3600);
-  } catch (err: any) {
-    logger.warn({ error: err.message }, '[REDIS] Job state write skipped');
-  }
+  } catch { /* silently skip */ }
 }
 
 export async function closeRedis(): Promise<void> {
   if (connection) {
-    await connection.quit();
+    await connection.quit().catch(() => {});
     connection = null;
     REDIS_AVAILABLE = false;
   }
