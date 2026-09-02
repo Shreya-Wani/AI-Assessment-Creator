@@ -8,7 +8,7 @@ const jobRooms = new Map<string, Set<string>>();
 
 export function initWebSocket(httpServer: HttpServer): SocketIOServer {
   io = new SocketIOServer(httpServer, {
-    cors: { origin: config.frontendUrl, methods: ['GET', 'POST'] },
+    cors: { origin: [config.frontendUrl, 'http://localhost:3000'], methods: ['GET', 'POST'], credentials: true },
     transports: ['websocket', 'polling'],
   });
 
@@ -54,10 +54,10 @@ export function emitProgress(jobId: string, progress: number, status: string): v
   }
 }
 
-export function emitCompleted(jobId: string, assignmentId: string, result: object): void {
+export function emitCompleted(jobId: string, assignmentId: string, result: object, title?: string): void {
   if (io) {
     logger.info({ jobId, assignmentId }, '[WS] Emitting completed');
-    io.to(`job:${jobId}`).emit('assignment:completed', { assignmentId, result });
+    io.to(`job:${jobId}`).emit('assignment:completed', { assignmentId, result, title });
   }
 }
 

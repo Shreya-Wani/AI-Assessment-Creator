@@ -408,7 +408,7 @@ function AssessmentContent() {
 
                         <div className="paper-details">
                           <div>Time Allowed: {formatDuration(result?.duration ?? currentAssignment?.duration)}</div>
-                          <div>Maximum Marks: {resolvedMaxMarks}</div>
+                          <div>Total Marks: {resolvedMaxMarks}</div>
                         </div>
                       </div>
 

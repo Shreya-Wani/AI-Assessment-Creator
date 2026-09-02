@@ -46,7 +46,7 @@ export const generatePdf = (assignment: any, res: Response, user?: any) => {
   // Metadata row
   doc.font('Helvetica-Bold').fontSize(11).fillColor('#1f2937');
   const left = `Time Allowed: ${duration || '—'}`;
-  const right = `Maximum Marks: ${totalMarks || '—'}`;
+  const right = `Total Marks: ${totalMarks || '—'}`;
   doc.text(left, { align: 'left' });
   doc.text(right, { align: 'right' });
   doc.moveDown(0.45);

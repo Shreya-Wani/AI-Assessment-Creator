@@ -57,7 +57,7 @@ export default function TopBar({ title }: { title: string }) {
     const unsubCompleted = onCompleted((data) => {
       addNotification({
         type: 'success',
-        message: `Assessment ready. Assignment ID: ${data.assignmentId}`,
+        message: data.title ? `Assessment ready: ${data.title}` : `Assessment ready. Assignment ID: ${data.assignmentId}`,
       });
     });
 

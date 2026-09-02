@@ -87,6 +87,7 @@ function HomeContent() {
         let type = 'short_answer';
         if (q.type.includes('Multiple')) type = 'mcq';
         else if (q.type.includes('Short')) type = 'short_answer';
+        else if (q.type.includes('Long')) type = 'long_answer';
         else if (q.type.includes('Diagram')) type = 'long_answer';
         else if (q.type.includes('Numerical')) type = 'numerical';
         return { type, count: q.count, marks: q.marks };
@@ -311,6 +312,7 @@ function HomeContent() {
                     >
                       <option>Multiple Choice Questions</option>
                       <option>Short Questions</option>
+                      <option>Long Questions</option>
                       <option>Diagram/Graph-Based Questions</option>
                       <option>Numerical Problems</option>
                       <option>New Custom Question</option>

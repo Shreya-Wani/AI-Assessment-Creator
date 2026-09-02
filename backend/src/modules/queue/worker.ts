@@ -55,7 +55,7 @@ export const startWorker = (): Worker | null => {
 
         await setJobState(jobId, 'completed');
         emitProgress(jobId, 100, 'completed');
-        emitCompleted(jobId, assignmentId, paper);
+        emitCompleted(jobId, assignmentId, paper, assignment.title);
 
         logger.info({ jobId, assignmentId }, '[JOB COMPLETED]');
         return paper;
