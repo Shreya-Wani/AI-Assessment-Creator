@@ -1,8 +1,8 @@
 # VedaAI — AI Assessment Creator
 
-> An intelligent, full-stack **AI-powered Assessment Creator** that allows teachers to create assignments and generate structured question papers using **Groq AI (Llama 3.3 70B)**. Built with modern technologies, JWT-based authentication, role-based access control, and real-time updates via WebSocket.
+> An intelligent, full-stack **AI-powered Assessment Creator** that allows teachers to create assignments and generate structured question papers using **Groq AI (GPT-OSS 120B)**. Built with modern technologies, JWT-based authentication, role-based access control, and real-time updates via WebSocket.
 
-![Tech Stack](https://img.shields.io/badge/Next.js-TypeScript-blue) ![Backend](https://img.shields.io/badge/Express-Node.js-green) ![AI](https://img.shields.io/badge/Groq-Llama_3.3_70B-orange) ![DB](https://img.shields.io/badge/MongoDB-Redis-red) ![Auth](https://img.shields.io/badge/Auth-JWT-yellow)
+![Tech Stack](https://img.shields.io/badge/Next.js-TypeScript-blue) ![Backend](https://img.shields.io/badge/Express-Node.js-green) ![AI](https://img.shields.io/badge/Groq-GPT_OSS_120B-orange) ![DB](https://img.shields.io/badge/MongoDB-Redis-red) ![Auth](https://img.shields.io/badge/Auth-JWT-yellow)
 
 ---
 
@@ -18,13 +18,13 @@
 │  • Socket.IO Client │                      │  │  Worker  │  │  Server  │  │
 │  • Auth Guard       │                      │  └────┬─────┘  └──────────┘  │
 │  • PDF Export       │                      └───────┼────────────────────── ┘
-└─────────────────────┘                             │
-                              ┌─────────────────────┼──────────────────┐
-                              │                     │                  │
-                        ┌─────▼──────┐    ┌─────────▼────┐   ┌────────▼───┐
-                        │  MongoDB   │    │    Redis     │   │  Groq AI   │
-                        │  Storage  │    │  Cache/Queue │   │ Llama 3.3  │
-                        └────────────┘    └──────────────┘   └────────────┘
+│ └─────────────────────┘                             │
+│                               ┌─────────────────────┼──────────────────┐
+│                               │                     │                  │
+│                         ┌─────▼──────┐    ┌─────────▼────┐   ┌────────▼───┐
+│                         │  MongoDB   │    │    Redis     │   │  Groq AI   │
+│                         │  Storage  │    │  Cache/Queue │   │GPT-OSS 120B│
+│                         └────────────┘    └──────────────┘   └────────────┘
 ```
 
 ### Request Flow
@@ -32,7 +32,7 @@
 2. Teacher fills the assignment creation form on the frontend
 3. Frontend sends an authenticated REST API request to the Express backend
 4. Backend creates a MongoDB record and queues a **BullMQ** job
-5. BullMQ worker picks up the job and calls **Groq AI (Llama 3.3 70B)**
+5. BullMQ worker picks up the job and calls **Groq AI (GPT-OSS 120B)**
 6. AI generates structured questions (sections, difficulty levels, marks)
 7. Result is stored in MongoDB and cached in **Redis**
 8. **Socket.IO** notifies the frontend in real-time with progress updates
@@ -51,7 +51,7 @@
 ### Teacher Features
 - **Assignment Creation Form** — Set due date, question types, marks per type
 - **File Upload** — Upload images/PDFs as reference material for question generation
-- **AI Question Generation** — Prompt-engineered with Groq Llama 3.3 70B Versatile
+- **AI Question Generation** — Prompt-engineered with Groq GPT-OSS 120B
 - **Regenerate** — Re-generate questions for any assignment with one click
 - **Delete Assignments** — Remove assignments permanently
 - **Group Management** — Create and manage student groups
@@ -89,7 +89,7 @@
 | **Redis** (ioredis) | Caching & BullMQ queue backend |
 | **BullMQ** | Background job processing for AI generation |
 | **Socket.IO** | Real-time server-to-client communication |
-| **Groq AI** (Llama 3.3 70B Versatile) | AI question generation |
+| **Groq AI** (GPT-OSS 120B) | AI question generation |
 | **JWT + bcryptjs** | Authentication & password hashing |
 
 ---
